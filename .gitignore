@@ -1,0 +1,32 @@
+# emacs stuff
+*.emacs.desktop*
+*~
+
+# build directories
+_build*
+
+# fortran 
+*.o
+*.mod
+*.ex
+
+# log files
+*.log
+
+# apple filesystem
+*.DS_Store
+
+# data files
+*.dat
+*.h5
+
+# images
+*.png
+*.jpg
+*.pdf
+
+# movies
+*.mp4
+
+# python things
+*.pyc
