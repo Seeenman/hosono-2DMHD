@@ -39,11 +39,10 @@ program mhd_driver
     ! ----------------------------------
     ! set initial conditions
     ! ----------------------------------
-    call initialCondition_set(paramfile, grid_U, grid_V, grid_N,&
-                              grid_minIdx, grid_maxIdx,&
-                              grid_strtIdx, grid_stopIdx,&
-                              grid_NGC, grid_dl, grid_x, grid_y)
-
+    call initialCondition_set(paramfile, grid_U, grid_V, &
+                              grid_minIdx, grid_maxIdx, &
+                              grid_strtIdx, grid_stopIdx, &
+                              grid_dl, grid_x, grid_y, grid_NGC)
     
 
 

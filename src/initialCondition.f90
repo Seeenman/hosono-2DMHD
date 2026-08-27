@@ -18,28 +18,30 @@ module initialCondition
 
 contains
 
-    subroutine initialCondition_set(paramfile, U, V, N, minIdx, maxIdx,&
-                                    strtIdx, stopIdx, NGC, dl, x, y)
+    subroutine initialCondition_set(paramfile, U, V, minIdx, maxIdx,&
+                                    strtIdx, stopIdx, dl, x, y, NGC)
         ! purpose:      Set the initial conditions
         !               
         ! 
         ! Inputs:       - U (real array) all conservative variables at every cell
         !               - V (real array) all primitive variables at every cell
-        !               - N (integer array) number of cells in each direction
         !               - minIdx/maxIdx (integer arrays) index of first/last
         !                 guard cells in each direction
         !               - strtIdx/stopIdx (integer arrays) index of first/last
         !                 interior cell in each direction
-        !               - NGC (integer) number of guard cells in each direction
         !               - dl (real array) holds dx and dy
         !               - x/y (real arrays) coordinates of cell centers
+        !               - NGC (integer) number of guard cells in each direction
         !               
         ! Outputs:      - U (real array) all conservative variables at every cell
         ! ------------------------------------------------------------
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
         integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
-        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC), dl(ndim)
+        integer, intent(in) :: NGC
+        real, intent(in) :: x(minIdx(xdir):maxIdx(xdir))
+        real, intent(in) :: y(minIdx(ydir):maxIdx(ydir))
+        real, intent(in) :: dl(ndim)
         real, intent(in out) :: U(nConsVars, &
                                   minIdx(xdir):maxIdx(xdir), &
                                   minIdx(ydir):maxIdx(ydir))
@@ -58,11 +60,11 @@ contains
         IC_type = readParamFile_char(paramfile, "IC_type")
         ! set conservative variables
         if (trim(IC_type)=="explosion2d") then
-            call explosion2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+            call explosion2d(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, x, y)
         else if (trim(IC_type)=="sedov2d") then
-            call sedov2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, dl, x, y)
+            call sedov2d(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, dl, x, y)
         else if (trim(IC_type)=="OrszagTang2d") then
-            call OrszagTang2D(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+            call OrszagTang2D(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, x, y)
         else
             write(*,*) "=========================================================================="
             write(*,*) "Unrecognized choice of initial condition: ", trim(IC_type)
@@ -96,12 +98,12 @@ contains
 
     end subroutine initialCondition_set
 
-    subroutine explosion2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+    subroutine explosion2d(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, x, y)
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
-        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx
-        integer, intent(in) :: NGC
-        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC)
+        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
+        real, intent(in) :: x(minIdx(xdir):maxIdx(xdir))
+        real, intent(in) :: y(minIdx(ydir):maxIdx(ydir))
         real, intent(in out) :: V(nPrimVars, &
                                   minIdx(xdir):maxIdx(xdir), &
                                   minIdx(ydir):maxIdx(ydir))
@@ -152,13 +154,14 @@ contains
 
     end subroutine explosion2d
 
-    subroutine sedov2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, dl, x, y)
+    subroutine sedov2d(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, dl, x, y)
         ! Initial conditions for 2D sedov test problem
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
-        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx
-        integer, intent(in) :: NGC
-        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC), dl(ndim)
+        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
+        real, intent(in) :: x(minIdx(xdir):maxIdx(xdir))
+        real, intent(in) :: y(minIdx(ydir):maxIdx(ydir))
+        real, intent(in) :: dl(ndim)
         real, intent(in out) :: V(nPrimVars, &
                                   minIdx(xdir):maxIdx(xdir), &
                                   minIdx(ydir):maxIdx(ydir))
@@ -204,13 +207,13 @@ contains
 
     end subroutine sedov2d
 
-    subroutine OrszagTang2D(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+    subroutine OrszagTang2D(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, x, y)
         ! Initial conditions for 2D Orszag Tang mhd test problem
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
-        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx
-        integer, intent(in) :: NGC
-        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC)
+        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
+        real, intent(in) :: x(minIdx(xdir):maxIdx(xdir))
+        real, intent(in) :: y(minIdx(ydir):maxIdx(ydir))
         real, intent(in out) :: V(nPrimVars, &
                                   minIdx(xdir):maxIdx(xdir), &
                                   minIdx(ydir):maxIdx(ydir))
