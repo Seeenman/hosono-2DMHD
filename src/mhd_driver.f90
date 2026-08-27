@@ -4,10 +4,15 @@ program mhd_driver
     use simulation, only: simulation_init
     use grid
     use initialCondition, only: initialCondition_set
+    use output, only: output_write
 
     implicit none
 
     character(len=max_string_length) :: paramfile
+
+    ! time stepping / output bookkeeping
+    integer :: nStep, lastOutputStep, outputCounter
+    real :: t, dt, lastOutputTime
 
     ! get name of parameter file
     call GET_COMMAND_ARGUMENT(1,paramfile)
@@ -44,6 +49,19 @@ program mhd_driver
                               grid_strtIdx, grid_stopIdx, &
                               grid_dl, grid_x, grid_y, grid_NGC)
 
+    ! ----------------------------------
+    ! write the initial condition to disk
+    ! ----------------------------------
+    nStep = 0
+    t = 0.0
+    dt = 0.0
+    lastOutputStep = 0
+    lastOutputTime = 0.0
+    outputCounter = 0
+    call output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, .true., &
+                      grid_V, grid_N, grid_minIdx, grid_maxIdx, &
+                      grid_strtIdx, grid_stopIdx, &
+                      grid_beg, grid_end, grid_dl)
 
     ! ----------------------------------------------------
     ! finalize (deallocate data)

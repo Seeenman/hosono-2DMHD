@@ -140,14 +140,14 @@ contains
                     V(velx_var,i,j) = velxIns
                     V(vely_var,i,j) = velyIns
                     V(velz_var,i,j) = velzIns
-                    V(ener_var,i,j) = presIns
+                    V(pres_var,i,j) = presIns
                 else
                     ! outside the circle
                     V(dens_var,i,j) = densOut
-                    V(momx_var,i,j) = velxOut*densOut
-                    V(momy_var,i,j) = velyOut*densOut
-                    V(momz_var,i,j) = velzOut*densOut
-                    V(ener_var,i,j) = presOut
+                    V(velx_var,i,j) = velxOut
+                    V(vely_var,i,j) = velyOut
+                    V(velz_var,i,j) = velzOut
+                    V(pres_var,i,j) = presOut
                 end if
             end do
         end do
