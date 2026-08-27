@@ -43,7 +43,6 @@ program mhd_driver
                               grid_minIdx, grid_maxIdx, &
                               grid_strtIdx, grid_stopIdx, &
                               grid_dl, grid_x, grid_y, grid_NGC)
-    
 
 
     ! ----------------------------------------------------

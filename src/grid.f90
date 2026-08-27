@@ -84,7 +84,6 @@ contains
         allocate(grid_beg(ndim)) ! lower bounds of computational domain
         allocate(grid_end(ndim)) ! upper bounds of computatoinal domain
         allocate(grid_dl(ndim)) ! will hold dx and dy
-        grid_NGC = grid_GPR
         
         ! read values in from parameter file
         grid_N(xdir) = readParamFile_int(paramfile, "grid_Nx") 
@@ -94,6 +93,8 @@ contains
         grid_end(xdir) = readParamFile_real(paramfile, "grid_xEnd")
         grid_beg(ydir) = readParamFile_real(paramfile, "grid_yBeg")
         grid_end(ydir) = readParamFile_real(paramfile, "grid_yEnd")
+
+        grid_NGC = grid_GPR
 
         ! set other variables based on what was read in from the paramter file
         do i_dim=1,ndim
@@ -151,8 +152,6 @@ contains
             grid_quadWeights(3) = (18.0+SQRT(30.0))/72.0
             grid_quadWeights(4) = (18.0-SQRT(30.0))/72.0
         end if
-        print *, "points", grid_quadPoints
-        print *, "weights", grid_quadWeights
         
         !!!! allocate other grid data !!!!
         !! conservative variables

@@ -53,7 +53,7 @@ contains
         integer i,j
 
         write(*,*) "=============================================================="
-        write(*,*) "Setting initical conditions"
+        write(*,*) "Setting initial conditions"
         write(*,*) "--------------------------------------------------------------"
 
         ! read the initial condition to be used from the parameter file
