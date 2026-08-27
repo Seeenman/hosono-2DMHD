@@ -16,7 +16,7 @@ module simulation
                                         sim_dataFileBaseName
 
     ! output type
-    logical :: sim_outputHdf5, sim_outputAscii
+    logical :: sim_outputHdf5, sim_outputAscii, sim_forceHydro
 
     ! maximum number of time steps, output frequency in time step
     integer :: sim_nstepmax, sim_outputFreqStep
@@ -50,6 +50,7 @@ contains
         sim_outputFreqStep = readParamFile_int(paramfile, 'sim_outputFreqStep')
         sim_outputHdf5 = readParamFile_logical(paramfile, 'sim_outputHdf5')
         sim_outputAscii = readParamFile_logical(paramfile, 'sim_outputAscii')
+        sim_forceHydro = readParamFile_logical(paramfile, 'sim_forceHydro')
 
         write(*,*) "--------------------------------------------------------------"
         write(*,*) "Simulation initialized"

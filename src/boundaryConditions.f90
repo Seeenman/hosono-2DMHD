@@ -13,35 +13,34 @@ module boundaryConditions
 
 contains
 
-    subroutine boundaryConditions_apply(UorV, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+    subroutine boundaryConditions_apply(UorV, nVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
         ! purpose:      Apply boundary conditions to the 
         !               conservative or primitive variables
         ! 
         ! Inputs:       - UorV (real array) all conservative or primitive variables
         !                 at every cell
+        !               - N (integer) nConsVars or nPrimVars
         !               - N (integer array) number of cells in each direction
         !               - minIdx/maxIdx (integer arrays) index of first/last
         !                 guard cells in each direction
         !               - strtIdx/stopIdx (integer arrays) index of first/last
         !                 interior cell in each direction
         !               - NGC (integer) number of guard cells in each direction
-        !               - x/y (real arrays) coordinates of cell centers
         !               
         ! Outputs:      - UorV (real array) all conservative or primnitive variables
         !                 at every cell
         ! ------------------------------------------------------------
         implicit none
-        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx
-        integer, intent(in) :: NGC
-        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC)
-        real, intent(in out) :: UorV(:, &
+        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
+        integer, intent(in) :: NGC, nVars
+        real, intent(in out) :: UorV(nVars, &
                                   minIdx(xdir):maxIdx(xdir), &
                                   minIdx(ydir):maxIdx(ydir))
 
         if (sim_BC == 'outflow') then
-            call outflow(UorV, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+            call outflow(UorV, nVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
         else if (sim_BC == 'periodic') then
-            call periodic(UorV, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+            call periodic(UorV, nVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
         else
             write(*,*) "=========================================================================="
             write(*,*) "Unrecognized choice of boundary condition: ", trim(sim_BC)
@@ -53,14 +52,13 @@ contains
 
     end subroutine boundaryConditions_apply
 
-    subroutine outflow(U, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+    subroutine outflow(UorV, nVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
 
         implicit none
 
-        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx
-        integer, intent(in) :: NGC
-        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC)
-        real, intent(in out) :: U(:, &
+        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
+        integer, intent(in) :: NGC, nVars
+        real, intent(in out) :: UorV(nVars, &
                                   minIdx(xdir):maxIdx(xdir), &
                                   minIdx(ydir):maxIdx(ydir))
         ! local variables
@@ -68,35 +66,34 @@ contains
 
         ! lower x boundary condition
         do i=minIdx(xdir),NGC
-            U(:, i, :) = &
-                U(:, strtIdx(xdir), :)
+            UorV(:, i, :) = &
+                UorV(:, strtIdx(xdir), :)
         end do
         ! upper x boundary condition
         do i=stopIdx(xdir)+1,maxIdx(xdir)
-            U(:, i, :) = &
-                U(:, stopIdx(xdir), :)
+            UorV(:, i, :) = &
+                UorV(:, stopIdx(xdir), :)
         end do
 
         ! lower y boundary condition
         do i=minIdx(ydir),NGC
-            U(:, :, i) = &
-                U(:, :, strtIdx(ydir))
+            UorV(:, :, i) = &
+                UorV(:, :, strtIdx(ydir))
         end do
         ! upper y boundary condition
         do i=stopIdx(ydir)+1,maxIdx(ydir)
-            U(:, :, i) = &
-                U(:, :, stopIdx(ydir))
+            UorV(:, :, i) = &
+                UorV(:, :, stopIdx(ydir))
         end do
 
     end subroutine outflow
 
-    subroutine periodic(UorV, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+    subroutine periodic(UorV, nVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
         implicit none
 
-        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx
-        integer, intent(in) :: NGC
-        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC)
-        real, intent(in out) :: UorV(:, &
+        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
+        integer, intent(in) :: NGC, nVars
+        real, intent(in out) :: UorV(nVars, &
                                   minIdx(xdir):maxIdx(xdir), &
                                   minIdx(ydir):maxIdx(ydir))
 
@@ -104,24 +101,24 @@ contains
 
         ! lower x boundary condition
         do i=1,NGC
-            U(:, strtIdx(xdir)-i, :) = &
-                U(:, stopIdx(xdir)-i+1, :)
+            UorV(:, strtIdx(xdir)-i, :) = &
+                UorV(:, stopIdx(xdir)-i+1, :)
         end do
         ! upper x boundary condition
         do i=1,NGC
-            U(:, stopIdx(xdir)+i, :) = &
-                U(:, strtIdx(xdir)+i-1, :)
+            UorV(:, stopIdx(xdir)+i, :) = &
+                UorV(:, strtIdx(xdir)+i-1, :)
         end do
 
         ! lower y boundary condition
         do i=1,NGC
-            U(:, :, strtIdx(ydir)-i) = &
-                U(:, :, stopIdx(ydir)-i+1)
+            UorV(:, :, strtIdx(ydir)-i) = &
+                UorV(:, :, stopIdx(ydir)-i+1)
         end do
         ! upper y boundary condition
         do i=1,NGC
-            U(:, :, stopIdx(ydir)+i) = &
-                U(:, :, strtIdx(ydir)+i-1)
+            UorV(:, :, stopIdx(ydir)+i) = &
+                UorV(:, :, strtIdx(ydir)+i-1)
         end do
 
     end subroutine periodic

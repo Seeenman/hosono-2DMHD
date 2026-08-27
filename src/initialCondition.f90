@@ -3,17 +3,12 @@
 
 module initialCondition
 
-    use definitions, only: &
-        xdir, ydir, &
-        max_string_length, ndim, nConsVars, nPrimVars, &
-        dens_var, momx_var, momy_var, momz_var, ener_var, &
-        magx_var, magy_var, magz_var, &
-        velx_var, vely_var, velz_var, pres_var, &
-        pi
+    use definitions
     use readParamFile, only: readParamFile_real, readParamFile_char
     use eos, only: eos_eintIdealGas
     use simulation, only: sim_gamma
     use boundaryConditions, only: boundaryConditions_apply
+    use convert, only: convert_prim2cons
 
     implicit none
 
@@ -36,16 +31,15 @@ contains
         !               - strtIdx/stopIdx (integer arrays) index of first/last
         !                 interior cell in each direction
         !               - NGC (integer) number of guard cells in each direction
-        !               - dl (integer array) holds dx and dy
+        !               - dl (real array) holds dx and dy
         !               - x/y (real arrays) coordinates of cell centers
         !               
         ! Outputs:      - U (real array) all conservative variables at every cell
         ! ------------------------------------------------------------
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
-        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx, dl
-        integer, intent(in) :: NGC
-        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC)
+        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
+        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC), dl(ndim)
         real, intent(in out) :: U(nConsVars, &
                                   minIdx(xdir):maxIdx(xdir), &
                                   minIdx(ydir):maxIdx(ydir))
@@ -64,11 +58,11 @@ contains
         IC_type = readParamFile_char(paramfile, "IC_type")
         ! set conservative variables
         if (trim(IC_type)=="explosion2d") then
-            call ICs_explosion2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+            call explosion2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
         else if (trim(IC_type)=="sedov2d") then
-            call ICs_sedov2d(paramfile)
+            call sedov2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, dl, x, y)
         else if (trim(IC_type)=="OrszagTang2d") then
-            call OrszagTang2D(paramfile, U, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+            call OrszagTang2D(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
         else
             write(*,*) "=========================================================================="
             write(*,*) "Unrecognized choice of initial condition: ", trim(IC_type)
@@ -78,8 +72,15 @@ contains
             stop
         end if
 
+        ! set internal energy
+        do j=strtIdx(YDIR), stopIdx(YDIR)
+            do i=strtIdx(XDIR), stopIdx(XDIR)
+                V(eint_var, i,j) = eos_eintIdealGas(V(pres_var,i,j), V(dens_var,i,j), sim_gamma)
+            end do
+        end do
+
         ! update boundary conditions because we have only set interior cells so far
-        call boundaryConditions_apply(V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+        call boundaryConditions_apply(V, nPrimVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
 
         ! also initialize conservative variables.
         ! note loops go over all cells including guard cells
@@ -95,7 +96,7 @@ contains
 
     end subroutine initialCondition_set
 
-    subroutine ICs_explosion2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+    subroutine explosion2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
         integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx
@@ -133,31 +134,31 @@ contains
             do i=strtIdx(xdir), stopIdx(xdir)
                 if (sqrt((x(i)-shockCenter_x)**2 + (y(j)-shockCenter_y)**2) <= shockRad) then
                     ! inside the circle
-                    V(dens_var,i,j,k) = densIns
-                    V(velx_var,i,j,k) = velxIns
-                    V(vely_var,i,j,k) = velyIns
-                    V(velz_var,i,j,k) = velzIns
-                    V(ener_var,i,j,k) = presIns
+                    V(dens_var,i,j) = densIns
+                    V(velx_var,i,j) = velxIns
+                    V(vely_var,i,j) = velyIns
+                    V(velz_var,i,j) = velzIns
+                    V(ener_var,i,j) = presIns
                 else
                     ! outside the circle
-                    V(dens_var,i,j,k) = densOut
-                    V(momx_var,i,j,k) = velxOut*densOut
-                    V(momy_var,i,j,k) = velyOut*densOut
-                    V(momz_var,i,j,k) = velzOut*densOut
-                    V(ener_var,i,j,k) = presOut
+                    V(dens_var,i,j) = densOut
+                    V(momx_var,i,j) = velxOut*densOut
+                    V(momy_var,i,j) = velyOut*densOut
+                    V(momz_var,i,j) = velzOut*densOut
+                    V(ener_var,i,j) = presOut
                 end if
             end do
         end do
 
-    end subroutine ICs_explosion2d
+    end subroutine explosion2d
 
-    subroutine ICs_sedov2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, dl, x, y)
+    subroutine sedov2d(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, dl, x, y)
         ! Initial conditions for 2D sedov test problem
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
-        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx, dl
+        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx
         integer, intent(in) :: NGC
-        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC)
+        real, intent(in) :: x(N(xdir)+2*NGC), y(N(ydir)+2*NGC), dl(ndim)
         real, intent(in out) :: V(nPrimVars, &
                                   minIdx(xdir):maxIdx(xdir), &
                                   minIdx(ydir):maxIdx(ydir))
@@ -188,21 +189,22 @@ contains
         V_out(velz_var) = 0.0
         V_out(pres_var) = 1e-5
 
+        V = 0.0
         do j=strtIdx(ydir), stopIdx(ydir)
             do i=strtIdx(xdir), stopIdx(xdir)
                 if (sqrt((x(i)-shockCenter_x)**2 + (y(j)-shockCenter_y)**2) <= shockRad) then
                     ! inside the circle
-                    V(dens_var:pres_var) = V_ins
+                    V(:, i,j) = V_ins
                 else
                     ! outside the circle
-                    V(dens_var:pres_var) = V_out
+                    V(:, i,j) = V_out
                 end if
             end do
         end do
 
-    end subroutine ICs_sedov2d
+    end subroutine sedov2d
 
-    subroutine ICs_OrszagTang2D(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
+    subroutine OrszagTang2D(paramfile, V, N, minIdx, maxIdx, strtIdx, stopIdx, NGC, x, y)
         ! Initial conditions for 2D Orszag Tang mhd test problem
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
@@ -215,7 +217,7 @@ contains
 
         real :: U0, dens
         real :: B0, pres
-        integer :: i,j,k
+        integer :: i,j
         real :: xx, yy
 
         ! read required values from parameter file
@@ -231,18 +233,18 @@ contains
             do i=strtIdx(xdir), stopIdx(xdir)
                 xx = x(i)
                 yy = y(j)
-                V(dens_var,i,j,k) =  dens
-                V(velx_var,i,j,k) = -U0*SIN(pi*yy*2.0)
-                V(vely_var,i,j,k) =  U0*SIN(pi*xx*2.0)
-                V(velz_var,i,j,k) =  0.0
-                V(magx_var,i,j,k) = -B0*SIN(pi*yy*2.0)
-                V(magy_var,i,j,k) =  B0*SIN(pi*xx*4.0)
-                V(magz_var,i,j,k) =  0.0
-                V(pres_var,i,j,k) =  pres
+                V(dens_var,i,j) =  dens
+                V(velx_var,i,j) = -U0*SIN(pi*yy*2.0)
+                V(vely_var,i,j) =  U0*SIN(pi*xx*2.0)
+                V(velz_var,i,j) =  0.0
+                V(magx_var,i,j) = -B0*SIN(pi*yy*2.0)
+                V(magy_var,i,j) =  B0*SIN(pi*xx*4.0)
+                V(magz_var,i,j) =  0.0
+                V(pres_var,i,j) =  pres
             end do
         end do
 
 
-    end subroutine ICs_OrszagTang2D
+    end subroutine OrszagTang2D
 
 end module initialCondition

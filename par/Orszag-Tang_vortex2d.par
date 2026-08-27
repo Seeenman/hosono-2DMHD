@@ -15,6 +15,7 @@ sim_riemannSolver = 'hllc'
 sim_cfl = 0.8
 sim_tmax = 1.0
 sim_nstepmax = 1000000
+sim_forceHydro = .false.
 
 ## =============================
 ## input/output parameters

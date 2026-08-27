@@ -6,12 +6,9 @@ module convert
     !   conservative variables -> primitive variables
     ! 
 
-    use definitions, only: &
-        nConsVars, nPrimVars, xdir, ydir, &
-        dens_var, momx_var, momy_var, momz_var, ener_var, magx_var, magy_var, magz_var, &
-        velx_var, vely_var, velz_var
+    use definitions
     use eos, only: eos_presIdealGas
-    use simulation, only: sim_gamma, sim_smallEnergy, sim_smallDensity
+    use simulation, only: sim_gamma, sim_smallEnergy, sim_smallDensity, sim_forceHydro
 
     implicit none
 
@@ -48,27 +45,20 @@ contains
         Ptot = V(pres_var) + Bp
 
         ! set indexing variables based on direction
-        if (dir==XDIR) then
+        if (dir==xdir) then
             vel_dirN  = velx_var
             vel_dirT1 = vely_var
             vel_dirT2 = velz_var
             mag_dirN  = magx_var
             mag_dirT1 = magy_var
             mag_dirT2 = magz_var
-        else if (dir==YDIR) then
+        else if (dir==ydir) then
             vel_dirN  = vely_var
             vel_dirT1 = velx_var
             vel_dirT2 = velz_var
             mag_dirN  = magy_var
             mag_dirT1 = magx_var
             mag_dirT2 = magz_var
-        else if (dir==ZDIR) then
-            vel_dirN  = velz_var
-            vel_dirT1 = velx_var
-            vel_dirT2 = vely_var
-            mag_dirN  = magz_var
-            mag_dirT1 = magx_var
-            mag_dirT2 = magy_var
         end if
 
         Flux = 0.0
@@ -182,7 +172,6 @@ contains
         end if
         V(pres_var) = pressure
         V(eint_var) = internalEnergy
-        V(gama_var) = sim_gamma
 
     end function convert_cons2prim
 

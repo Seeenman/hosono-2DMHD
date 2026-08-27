@@ -2,10 +2,7 @@ program mhd_driver
 
     use definitions, only: max_string_length
     use simulation, only: simulation_init
-    use grid, only: grid_minIdx, grid_maxIdx, &
-                    grid_strtIdx, grid_stopIdx, &
-                    grid_x, grid_y, grid_NGC, grid_N, grid_dl, &
-                    grid_U, grid_V
+    use grid
     use initialCondition, only: initialCondition_set
 
     implicit none

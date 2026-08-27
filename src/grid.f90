@@ -95,12 +95,6 @@ contains
         grid_beg(ydir) = readParamFile_real(paramfile, "grid_yBeg")
         grid_end(ydir) = readParamFile_real(paramfile, "grid_yEnd")
 
-        ! allocate space for grids now that we have Nx and Ny
-        allocate(grid_x(grid_N(xdir) + 2*grid_NGC))
-        grid_x = 0.0 ! zero out 
-        allocate(grid_y(grid_N(ydir) + 2*grid_NGC))
-        grid_y = 0.0 ! zero out 
-        
         ! set other variables based on what was read in from the paramter file
         do i_dim=1,ndim
             grid_minIdx(i_dim) = 1 ! index of first guard cell
@@ -109,6 +103,12 @@ contains
             grid_stopIdx(i_dim) = grid_maxIdx(i_dim) - grid_NGC ! index of last real (interior) cell
             grid_dl(i_dim) = (grid_end(i_dim)-grid_beg(i_dim))/grid_N(i_dim) ! set dx and dy
         end do
+
+        ! allocate space for grids now that we have Nx and Ny
+        allocate(grid_x(grid_minIdx(xdir):grid_maxIdx(xdir)))
+        grid_x = 0.0 ! zero out 
+        allocate(grid_y(grid_minIdx(ydir):grid_maxIdx(ydir)))
+        grid_y = 0.0 ! zero out 
         
         ! fill in grid points
         do i=grid_minIdx(xdir), grid_maxIdx(xdir)

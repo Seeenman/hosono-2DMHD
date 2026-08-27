@@ -24,6 +24,7 @@ module definitions
     integer, parameter :: vely_var = 3 ! y-velocity
     integer, parameter :: velz_var = 4 ! z-velocity
     integer, parameter :: pres_var = 5 ! pressure
+    integer, parameter :: eint_var = 9 ! internal energy
 
     ! other
     integer, parameter :: max_string_length = 800

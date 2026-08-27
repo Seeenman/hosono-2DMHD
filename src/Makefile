@@ -56,6 +56,7 @@ else
 endif
 
 OBJ := definitions.o readParamFile.o simulation.o grid.o \
+       boundaryConditions.o eos.o convert.o initialCondition.o \
        mhd_driver.o
 
 .PHONY: all
