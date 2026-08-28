@@ -55,7 +55,7 @@ else
     $(error MODE must be 'debug' or 'release')
 endif
 
-OBJ := definitions.o readParamFile.o simulation.o grid.o \
+OBJ := definitions.o readParamFile.o simulation.o gridBlock.o grid.o \
        boundaryConditions.o eos.o convert.o initialCondition.o output.o \
        mhd_driver.o
 

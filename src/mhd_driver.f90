@@ -44,10 +44,7 @@ program mhd_driver
     ! ----------------------------------
     ! set initial conditions
     ! ----------------------------------
-    call initialCondition_set(paramfile, grid_U, grid_V, &
-                              grid_minIdx, grid_maxIdx, &
-                              grid_strtIdx, grid_stopIdx, &
-                              grid_dl, grid_x, grid_y, grid_NGC)
+    call initialCondition_set(paramfile, grid_block)
 
     ! ----------------------------------
     ! write the initial condition to disk
@@ -58,10 +55,7 @@ program mhd_driver
     lastOutputStep = 0
     lastOutputTime = 0.0
     outputCounter = 0
-    call output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, .true., &
-                      grid_V, grid_N, grid_minIdx, grid_maxIdx, &
-                      grid_strtIdx, grid_stopIdx, &
-                      grid_beg, grid_end, grid_dl)
+    call output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, .true., grid_block)
 
     ! ----------------------------------------------------
     ! finalize (deallocate data)

@@ -1,15 +1,24 @@
 module grid
 
-    ! grid data and subroutines to initialize and finalize
-    ! global grid arrays
+    ! Module that owns the instance of the grid block custom data
+    ! type for the run as well as the subroutines to initialize
+    ! (allocate) and finalize (deallocate) it.
+    !
+    ! The grid data for a block (in a serial simulatoin the entire
+    ! computational domain) is in grid_block which is of type gridBlock_t
+    ! (defined in gridBlock.f90) and includes indices, domain geometry,
+    ! primitive and conservative variables at each cell, face centered
+    ! values, etc). What remains in this module as module variables
+    ! defined outside of grid_block are properties of the numerical method
+    ! such as the Gaussian process radius and related parameters
+    ! since these are not properties that vary depending on where
+    ! in the domain one is. 
 
-    use definitions, only: max_string_length, ndim, xdir, ydir, nConsVars, nPrimVars
+    use definitions, only: max_string_length, ndim, xdir, ydir
     use readParamFile, only: readParamFile_int, readParamFile_real
+    use gridBlock, only: gridBlock_t, gridBlock_alloc, gridBlock_dealloc
 
     implicit none
-
-    ! number of guard cells padding the domain in each direction
-    integer, allocatable :: grid_NGC
 
     ! Gaussian Process Stencil Radius (GPR)
     integer :: grid_GPR
@@ -18,38 +27,8 @@ module grid
     integer :: grid_nquad ! number of face quadrature points
     real, allocatable :: grid_quadPoints(:), grid_quadWeights(:)
 
-    ! The grid itself
-    integer, allocatable :: grid_N(:), grid_strtIdx(:), grid_stopIdx(:), &
-                                  grid_minIdx(:), grid_maxIdx(:)
-    real, allocatable :: grid_beg(:), grid_end(:), grid_dl(:)
-    real, allocatable :: grid_x(:) ! the values of the grid in the x direction
-    real, allocatable :: grid_y(:) ! the values of the grid in the y direction
-
-    ! conservative and primitive variables
-    ! dimensions correspond to (variable, xcoordinate, ycoordinate)
-    real, allocatable :: grid_U(:,:,:), grid_V(:,:,:)
-
-    ! Pointwise conservaitve variables reconstructed at face quadrature points
-    ! (variable, direction, quadrature_point, xcoordinate, ycoordinate)
-    real, allocatable :: grid_lowerFace(:,:,:,:,:) 
-    real, allocatable :: grid_upperFace(:,:,:,:,:)
-    ! Note that these are indexed in terms of the cell for which they were
-    ! calculated. For example grid_lowerFace(:,xdir,1,i,j)
-    ! is the right Riemann state for the x-direction
-    ! Riemann problem at the first gaussian quadrature point
-    ! at interface (i-1/2,j). Similarly, grid_lowerFace(:,ydir,2,i,j)
-    ! is the left Riemann state for the y-direction
-    ! Riemann problem at the second gaussian quadrature point
-    ! at interface (i,j+1/2)
-
-    ! Flux values from local Riemann problems at face quadrature points
-    ! (variable, direction, quadrature_point, xcoordinate, ycoordinate)
-    real, allocatable :: grid_flux(:,:,:,:,:)
-    ! Note that, for example, 
-    ! grid_flux(:,xdir,2,i,j  )=F_{i-1/2, j    } at the  first gaussian quadrature point
-    ! grid_flux(:,ydir,1,i,j  )=G_{i,     j-1/2} at the second gaussian quadrature point
-    ! grid_flux(:,xdir,1,i+1,j)=F_{i+1/2, j    } at the first gaussian quadrature point
-    ! et cetera
+    ! The grid for this run. See gridBlock.f90 for data in this struct
+    type(gridBlock_t) :: grid_block
 
 contains
 
@@ -74,49 +53,26 @@ contains
         write(*,*) "=============================================================="
         write(*,*) "Initializing grid"
         write(*,*) "--------------------------------------------------------------"
-        
-        ! allocate arrays to be compatible with up to a 3D simulation
-        allocate(grid_N(ndim))
-        allocate(grid_minIdx(ndim)) ! index of first guard cell
-        allocate(grid_maxIdx(ndim)) ! index of last guard cell
-        allocate(grid_strtIdx(ndim)) ! index of first interior cell (first non-guard-cell)
-        allocate(grid_stopIdx(ndim)) ! index of last interior cell (first non-guard-cell)
-        allocate(grid_beg(ndim)) ! lower bounds of computational domain
-        allocate(grid_end(ndim)) ! upper bounds of computatoinal domain
-        allocate(grid_dl(ndim)) ! will hold dx and dy
-        
-        ! read values in from parameter file
-        grid_N(xdir) = readParamFile_int(paramfile, "grid_Nx") 
-        grid_N(ydir) = readParamFile_int(paramfile, "grid_Ny") 
-        grid_GPR = readParamFile_int(paramfile, "grid_GPR") 
-        grid_beg(xdir) = readParamFile_real(paramfile, "grid_xBeg")
-        grid_end(xdir) = readParamFile_real(paramfile, "grid_xEnd")
-        grid_beg(ydir) = readParamFile_real(paramfile, "grid_yBeg")
-        grid_end(ydir) = readParamFile_real(paramfile, "grid_yEnd")
 
-        grid_NGC = grid_GPR
+        ! read values in from parameter file
+        grid_block%N(xdir) = readParamFile_int(paramfile, "grid_Nx")
+        grid_block%N(ydir) = readParamFile_int(paramfile, "grid_Ny")
+        grid_GPR = readParamFile_int(paramfile, "grid_GPR")
+        grid_block%domainBeg(xdir) = readParamFile_real(paramfile, "grid_xBeg")
+        grid_block%domainEnd(xdir) = readParamFile_real(paramfile, "grid_xEnd")
+        grid_block%domainBeg(ydir) = readParamFile_real(paramfile, "grid_yBeg")
+        grid_block%domainEnd(ydir) = readParamFile_real(paramfile, "grid_yEnd")
+
+        grid_block%NGC = grid_GPR
 
         ! set other variables based on what was read in from the paramter file
         do i_dim=1,ndim
-            grid_minIdx(i_dim) = 1 ! index of first guard cell
-            grid_maxIdx(i_dim) = grid_N(i_dim) + 2*grid_NGC ! index of last guard cell
-            grid_strtIdx(i_dim) = grid_minIdx(i_dim) + grid_NGC ! index of first real (interior) cell
-            grid_stopIdx(i_dim) = grid_maxIdx(i_dim) - grid_NGC ! index of last real (interior) cell
-            grid_dl(i_dim) = (grid_end(i_dim)-grid_beg(i_dim))/grid_N(i_dim) ! set dx and dy
-        end do
-
-        ! allocate space for grids now that we have Nx and Ny
-        allocate(grid_x(grid_minIdx(xdir):grid_maxIdx(xdir)))
-        grid_x = 0.0 ! zero out 
-        allocate(grid_y(grid_minIdx(ydir):grid_maxIdx(ydir)))
-        grid_y = 0.0 ! zero out 
-        
-        ! fill in grid points
-        do i=grid_minIdx(xdir), grid_maxIdx(xdir)
-            grid_x(i) = (i-grid_NGC-0.5)*grid_dl(xdir) + grid_beg(xdir)
-        end do
-        do i=grid_minIdx(ydir), grid_maxIdx(ydir)
-            grid_y(i) = (i-grid_NGC-0.5)*grid_dl(ydir) + grid_beg(ydir)
+            grid_block%minIdx(i_dim) = 1 ! index of first guard cell
+            grid_block%maxIdx(i_dim) = grid_block%N(i_dim) + 2*grid_block%NGC ! index of last guard cell
+            grid_block%strtIdx(i_dim) = grid_block%minIdx(i_dim) + grid_block%NGC ! index of first real (interior) cell
+            grid_block%stopIdx(i_dim) = grid_block%maxIdx(i_dim) - grid_block%NGC ! index of last real (interior) cell
+            ! set dx and dy
+            grid_block%dl(i_dim) = (grid_block%domainEnd(i_dim)-grid_block%domainBeg(i_dim))/grid_block%N(i_dim)
         end do
 
         !!!! Set quadrature coordinates and quadrature weights
@@ -152,35 +108,19 @@ contains
             grid_quadWeights(3) = (18.0+SQRT(30.0))/72.0
             grid_quadWeights(4) = (18.0-SQRT(30.0))/72.0
         end if
-        
-        !!!! allocate other grid data !!!!
-        !! conservative variables
-        allocate(grid_U(nConsVars,& 
-                        grid_minIdx(xdir):grid_maxIdx(xdir),&
-                        grid_minIdx(ydir):grid_maxIdx(ydir)))
-        !! primitive variables
-        allocate(grid_V(nPrimVars,& 
-                        grid_minIdx(xdir):grid_maxIdx(xdir),&
-                        grid_minIdx(ydir):grid_maxIdx(ydir)))
-        !! lower face reconstructions
-        allocate(grid_lowerFace(nConsVars, ndim, grid_nquad, &
-                                grid_minIdx(xdir):grid_maxIdx(xdir),&
-                                grid_minIdx(ydir):grid_maxIdx(ydir)))
-        !! upper face reconstructions
-        allocate(grid_upperFace(nConsVars, ndim, grid_nquad, &
-                                grid_minIdx(xdir):grid_maxIdx(xdir),&
-                                grid_minIdx(ydir):grid_maxIdx(ydir)))
-        !! Fluxes
-        allocate(grid_flux(nConsVars, ndim, grid_nquad, &
-                           grid_minIdx(xdir):grid_maxIdx(xdir),&
-                           grid_minIdx(ydir):grid_maxIdx(ydir)))
 
-        !!! zero it all of these out !!!
-        grid_U = 0.0 
-        grid_V = 0.0 
-        grid_lowerFace = 0.0 
-        grid_upperFace = 0.0 
-        grid_flux = 0.0
+        !!!! allocate (and zero) the arrays belonging to the block, now
+        !!!! that we know Nx, Ny, the guard cell count, and the
+        !!!! number of quadrature points
+        call gridBlock_alloc(grid_block, grid_nquad)
+
+        ! fill in grid points
+        do i=grid_block%minIdx(xdir), grid_block%maxIdx(xdir)
+            grid_block%x(i) = (i-grid_block%NGC-0.5)*grid_block%dl(xdir) + grid_block%domainBeg(xdir)
+        end do
+        do i=grid_block%minIdx(ydir), grid_block%maxIdx(ydir)
+            grid_block%y(i) = (i-grid_block%NGC-0.5)*grid_block%dl(ydir) + grid_block%domainBeg(ydir)
+        end do
 
         write(*,*) "--------------------------------------------------------------"
         write(*,*) "Grid initialized"
@@ -198,24 +138,9 @@ contains
         ! Outputs:      - none
         ! ------------------------------------------------------------
         implicit none
-        deallocate(grid_N)
-        deallocate(grid_strtIdx)
-        deallocate(grid_stopIdx)
-        deallocate(grid_minIdx)
-        deallocate(grid_maxIdx)
-        deallocate(grid_beg)
-        deallocate(grid_end)
-        deallocate(grid_dl)
-        deallocate(grid_U)
-        deallocate(grid_V)
-        deallocate(grid_lowerFace)
-        deallocate(grid_upperFace)
-        deallocate(grid_flux)
-        deallocate(grid_x)
-        deallocate(grid_y)
+        call gridBlock_dealloc(grid_block)
         deallocate(grid_quadPoints)
         deallocate(grid_quadWeights)
     end subroutine grid_finalize
 
 end module grid
-

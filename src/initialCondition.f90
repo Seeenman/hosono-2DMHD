@@ -9,6 +9,7 @@ module initialCondition
     use simulation, only: sim_gamma
     use boundaryConditions, only: boundaryConditions_apply
     use convert, only: convert_prim2cons
+    use gridBlock, only: gridBlock_t
 
     implicit none
 
@@ -18,36 +19,21 @@ module initialCondition
 
 contains
 
-    subroutine initialCondition_set(paramfile, U, V, minIdx, maxIdx,&
-                                    strtIdx, stopIdx, dl, x, y, NGC)
+    subroutine initialCondition_set(paramfile, blk)
         ! purpose:      Set the initial conditions
         !               
         ! 
-        ! Inputs:       - U (real array) all conservative variables at every cell
-        !               - V (real array) all primitive variables at every cell
-        !               - minIdx/maxIdx (integer arrays) index of first/last
-        !                 guard cells in each direction
-        !               - strtIdx/stopIdx (integer arrays) index of first/last
-        !                 interior cell in each direction
-        !               - dl (real array) holds dx and dy
-        !               - x/y (real arrays) coordinates of cell centers
-        !               - NGC (integer) number of guard cells in each direction
+        ! Inputs:       - paramfile (character) name of the parameter file
+        !               - blk (gridBlock_t) the block to set the initial
+        !                 condition on, carrying its own indices, geometry,
+        !                 and fluid state
         !               
-        ! Outputs:      - U (real array) all conservative variables at every cell
+        ! Outputs:      - blk%V (real array) primitive variables at every cell
+        !               - blk%U (real array) conservative variables at every cell
         ! ------------------------------------------------------------
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
-        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
-        integer, intent(in) :: NGC
-        real, intent(in) :: x(minIdx(xdir):maxIdx(xdir))
-        real, intent(in) :: y(minIdx(ydir):maxIdx(ydir))
-        real, intent(in) :: dl(ndim)
-        real, intent(in out) :: U(nConsVars, &
-                                  minIdx(xdir):maxIdx(xdir), &
-                                  minIdx(ydir):maxIdx(ydir))
-        real, intent(in out) :: V(nPrimVars, &
-                                  minIdx(xdir):maxIdx(xdir), &
-                                  minIdx(ydir):maxIdx(ydir))
+        type(gridBlock_t), intent(in out) :: blk
 
         character(len=max_string_length) :: IC_type
         integer i,j
@@ -60,11 +46,11 @@ contains
         IC_type = readParamFile_char(paramfile, "IC_type")
         ! set conservative variables
         if (trim(IC_type)=="explosion2d") then
-            call explosion2d(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, x, y)
+            call explosion2d(paramfile, blk)
         else if (trim(IC_type)=="sedov2d") then
-            call sedov2d(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, dl, x, y)
+            call sedov2d(paramfile, blk)
         else if (trim(IC_type)=="OrszagTang2d") then
-            call OrszagTang2D(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, x, y)
+            call OrszagTang2D(paramfile, blk)
         else
             write(*,*) "=========================================================================="
             write(*,*) "Unrecognized choice of initial condition: ", trim(IC_type)
@@ -74,21 +60,23 @@ contains
             stop
         end if
 
-        ! set internal energy
-        do j=strtIdx(YDIR), stopIdx(YDIR)
-            do i=strtIdx(XDIR), stopIdx(XDIR)
-                V(eint_var, i,j) = eos_eintIdealGas(V(pres_var,i,j), V(dens_var,i,j), sim_gamma)
+        ! set internal energy and adiabatic index
+        do j=blk%strtIdx(YDIR), blk%stopIdx(YDIR)
+            do i=blk%strtIdx(XDIR), blk%stopIdx(XDIR)
+                blk%V(eint_var, i,j) = eos_eintIdealGas(blk%V(pres_var,i,j), blk%V(dens_var,i,j), sim_gamma)
+                blk%V(gamm_var, i,j) = sim_gamma
             end do
         end do
 
         ! update boundary conditions because we have only set interior cells so far
-        call boundaryConditions_apply(V, nPrimVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
+        call boundaryConditions_apply(blk%V, nPrimVars, blk%minIdx, blk%maxIdx, &
+                                      blk%strtIdx, blk%stopIdx, blk%NGC)
 
         ! also initialize conservative variables.
         ! note loops go over all cells including guard cells
-        do j=minIdx(ydir), maxIdx(ydir)
-            do i=minIdx(xdir), maxIdx(xdir)
-                U(:,i,j) = convert_prim2cons(V(:,i,j))
+        do j=blk%minIdx(ydir), blk%maxIdx(ydir)
+            do i=blk%minIdx(xdir), blk%maxIdx(xdir)
+                blk%U(:,i,j) = convert_prim2cons(blk%V(:,i,j))
             end do
         end do
 
@@ -98,15 +86,10 @@ contains
 
     end subroutine initialCondition_set
 
-    subroutine explosion2d(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, x, y)
+    subroutine explosion2d(paramfile, blk)
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
-        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
-        real, intent(in) :: x(minIdx(xdir):maxIdx(xdir))
-        real, intent(in) :: y(minIdx(ydir):maxIdx(ydir))
-        real, intent(in out) :: V(nPrimVars, &
-                                  minIdx(xdir):maxIdx(xdir), &
-                                  minIdx(ydir):maxIdx(ydir))
+        type(gridBlock_t), intent(in out) :: blk
 
         real :: shockCenter_x, shockCenter_y, shockRad, &
                     densIns, densOut, &
@@ -131,40 +114,34 @@ contains
         presIns = readParamFile_real(paramfile, "IC_presIns")
         presOut = readParamFile_real(paramfile, "IC_presOut")
 
-        V = 0.0
-        do j=strtIdx(ydir), stopIdx(ydir)
-            do i=strtIdx(xdir), stopIdx(xdir)
-                if (sqrt((x(i)-shockCenter_x)**2 + (y(j)-shockCenter_y)**2) <= shockRad) then
+        blk%V = 0.0
+        do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
+            do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
+                if (sqrt((blk%x(i)-shockCenter_x)**2 + (blk%y(j)-shockCenter_y)**2) <= shockRad) then
                     ! inside the circle
-                    V(dens_var,i,j) = densIns
-                    V(velx_var,i,j) = velxIns
-                    V(vely_var,i,j) = velyIns
-                    V(velz_var,i,j) = velzIns
-                    V(pres_var,i,j) = presIns
+                    blk%V(dens_var,i,j) = densIns
+                    blk%V(velx_var,i,j) = velxIns
+                    blk%V(vely_var,i,j) = velyIns
+                    blk%V(velz_var,i,j) = velzIns
+                    blk%V(pres_var,i,j) = presIns
                 else
                     ! outside the circle
-                    V(dens_var,i,j) = densOut
-                    V(velx_var,i,j) = velxOut
-                    V(vely_var,i,j) = velyOut
-                    V(velz_var,i,j) = velzOut
-                    V(pres_var,i,j) = presOut
+                    blk%V(dens_var,i,j) = densOut
+                    blk%V(velx_var,i,j) = velxOut
+                    blk%V(vely_var,i,j) = velyOut
+                    blk%V(velz_var,i,j) = velzOut
+                    blk%V(pres_var,i,j) = presOut
                 end if
             end do
         end do
 
     end subroutine explosion2d
 
-    subroutine sedov2d(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, dl, x, y)
+    subroutine sedov2d(paramfile, blk)
         ! Initial conditions for 2D sedov test problem
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
-        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
-        real, intent(in) :: x(minIdx(xdir):maxIdx(xdir))
-        real, intent(in) :: y(minIdx(ydir):maxIdx(ydir))
-        real, intent(in) :: dl(ndim)
-        real, intent(in out) :: V(nPrimVars, &
-                                  minIdx(xdir):maxIdx(xdir), &
-                                  minIdx(ydir):maxIdx(ydir))
+        type(gridBlock_t), intent(in out) :: blk
 
         real :: shockCenter_x, shockCenter_y, shockRad
         real, dimension(nPrimVars) :: V_ins, V_out
@@ -174,7 +151,7 @@ contains
         shockCenter_x = readParamFile_real(paramfile, "IC_shockCenter_x")
         shockCenter_y = readParamFile_real(paramfile, "IC_shockCenter_y")
 
-        shockRad   = 3.5*MIN(dl(xdir), dl(ydir))
+        shockRad   = 3.5*MIN(blk%dl(xdir), blk%dl(ydir))
 
         ! cylindricaly geometry
         nn = 2
@@ -192,31 +169,26 @@ contains
         V_out(velz_var) = 0.0
         V_out(pres_var) = 1e-5
 
-        V = 0.0
-        do j=strtIdx(ydir), stopIdx(ydir)
-            do i=strtIdx(xdir), stopIdx(xdir)
-                if (sqrt((x(i)-shockCenter_x)**2 + (y(j)-shockCenter_y)**2) <= shockRad) then
+        blk%V = 0.0
+        do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
+            do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
+                if (sqrt((blk%x(i)-shockCenter_x)**2 + (blk%y(j)-shockCenter_y)**2) <= shockRad) then
                     ! inside the circle
-                    V(:, i,j) = V_ins
+                    blk%V(:, i,j) = V_ins
                 else
                     ! outside the circle
-                    V(:, i,j) = V_out
+                    blk%V(:, i,j) = V_out
                 end if
             end do
         end do
 
     end subroutine sedov2d
 
-    subroutine OrszagTang2D(paramfile, V, minIdx, maxIdx, strtIdx, stopIdx, x, y)
+    subroutine OrszagTang2D(paramfile, blk)
         ! Initial conditions for 2D Orszag Tang mhd test problem
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
-        integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx
-        real, intent(in) :: x(minIdx(xdir):maxIdx(xdir))
-        real, intent(in) :: y(minIdx(ydir):maxIdx(ydir))
-        real, intent(in out) :: V(nPrimVars, &
-                                  minIdx(xdir):maxIdx(xdir), &
-                                  minIdx(ydir):maxIdx(ydir))
+        type(gridBlock_t), intent(in out) :: blk
 
         real :: U0, dens
         real :: B0, pres
@@ -232,18 +204,18 @@ contains
         pres = 1/sim_gamma
 
         ! Set primitive variables
-        do j=strtIdx(ydir), stopIdx(ydir)
-            do i=strtIdx(xdir), stopIdx(xdir)
-                xx = x(i)
-                yy = y(j)
-                V(dens_var,i,j) =  dens
-                V(velx_var,i,j) = -U0*SIN(pi*yy*2.0)
-                V(vely_var,i,j) =  U0*SIN(pi*xx*2.0)
-                V(velz_var,i,j) =  0.0
-                V(magx_var,i,j) = -B0*SIN(pi*yy*2.0)
-                V(magy_var,i,j) =  B0*SIN(pi*xx*4.0)
-                V(magz_var,i,j) =  0.0
-                V(pres_var,i,j) =  pres
+        do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
+            do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
+                xx = blk%x(i)
+                yy = blk%y(j)
+                blk%V(dens_var,i,j) =  dens
+                blk%V(velx_var,i,j) = -U0*SIN(pi*yy*2.0)
+                blk%V(vely_var,i,j) =  U0*SIN(pi*xx*2.0)
+                blk%V(velz_var,i,j) =  0.0
+                blk%V(magx_var,i,j) = -B0*SIN(pi*yy*2.0)
+                blk%V(magy_var,i,j) =  B0*SIN(pi*xx*4.0)
+                blk%V(magz_var,i,j) =  0.0
+                blk%V(pres_var,i,j) =  pres
             end do
         end do
 

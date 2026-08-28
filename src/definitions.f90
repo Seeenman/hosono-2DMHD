@@ -19,12 +19,13 @@ module definitions
     integer, parameter :: magz_var = 8 ! z-magnetic field
 
     ! primitive variables
-    integer, parameter :: nPrimVars = 9 ! number of conservative variables
+    integer, parameter :: nPrimVars = 10 ! number of conservative variables
     integer, parameter :: velx_var = 2 ! x-velocity
     integer, parameter :: vely_var = 3 ! y-velocity
     integer, parameter :: velz_var = 4 ! z-velocity
     integer, parameter :: pres_var = 5 ! pressure
     integer, parameter :: eint_var = 9 ! internal energy
+    integer, parameter :: gamm_var = 10 ! adiabatic index
 
     ! other
     integer, parameter :: max_string_length = 800

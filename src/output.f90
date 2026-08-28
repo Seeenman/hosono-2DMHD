@@ -7,13 +7,15 @@ module output
     !
     ! The grid data this module writes is passed in through the argument
     ! list rather than being use-associated from the grid module, so that
-    ! this module has no knowledge of where that data lives.
+    ! this module has no knowledge of where that data lives. It arrives
+    ! bundled as a gridBlock_t.
 
     use hdf5
-    use definitions, only: ndim, xdir, ydir, max_string_length, nPrimVars, &
+    use definitions, only: ndim, xdir, ydir, max_string_length, &
                            dens_var, velx_var, vely_var, velz_var, &
                            magx_var, magy_var, magz_var, &
                            pres_var, eint_var
+    use gridBlock, only: gridBlock_t
     use simulation, only: sim_dataFileBaseName, sim_outputFreqStep, sim_outputFreqTime, &
                           sim_outputHdf5, sim_outputAscii, sim_gamma
 
@@ -25,8 +27,7 @@ module output
 
 contains
 
-    subroutine output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, forceOutput, &
-                            V, N, minIdx, maxIdx, strtIdx, stopIdx, domainBeg, domainEnd, dl)
+    subroutine output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, forceOutput, blk)
         ! purpose:      Decide whether it is time to write an output file,
         !               and write one if so
         !
@@ -37,15 +38,12 @@ contains
         !               - outputCounter (integer) number of the next output file
         !               - forceOutput (logical) write regardless of the output
         !                 frequency (used for the initial condition, for example)
-        !               - V (real array) all primitive variables at every cell
-        !               - N (integer array) number of interior cells in each direction
-        !               - minIdx/maxIdx (integer arrays) index of first/last
-        !                 guard cells in each direction
-        !               - strtIdx/stopIdx (integer arrays) index of first/last
-        !                 interior cell in each direction
-        !               - domainBeg/domainEnd (real arrays) lower/upper bounds of
-        !                 the computational domain in each direction
-        !               - dl (real array) holds dx and dy
+        !               - blk (gridBlock_t) the block of the grid to write,
+        !                 carrying its own indices, geometry, and fluid state
+        !
+        ! Note:         blk%V must have up to date guard cells, because the
+        !               divergence of B is evaluated with a centered stencil
+        !               that reaches one cell outside the interior.
         !
         ! Outputs:      - lastOutputStep/lastOutputTime/outputCounter are updated
         !                 whenever a file is written
@@ -56,11 +54,7 @@ contains
         integer, intent(in) :: nStep
         integer, intent(inout) :: lastOutputStep, outputCounter
         logical, intent(in) :: forceOutput
-        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx
-        real, dimension(ndim), intent(in) :: domainBeg, domainEnd, dl
-        real, intent(in) :: V(nPrimVars, &
-                              minIdx(xdir):maxIdx(xdir), &
-                              minIdx(ydir):maxIdx(ydir))
+        type(gridBlock_t), intent(in) :: blk
         ! local variables
         character(len=max_string_length) :: outputfile
         character(len=5) :: counterChar
@@ -99,9 +93,7 @@ contains
             if (sim_outputHdf5) then
                 ! file name for hdf5 output
                 outputfile = trim(sim_dataFileBaseName)//'_'//trim(counterChar)//'.h5'
-                call output_writeHdf5(nStep, t, dt, outputCounter, trim(outputfile), &
-                                      V, N, minIdx, maxIdx, strtIdx, stopIdx, &
-                                      domainBeg, domainEnd, dl)
+                call output_writeHdf5(nStep, t, dt, outputCounter, trim(outputfile), blk)
             end if
 
             ! write a message to stdout
@@ -121,8 +113,7 @@ contains
 
     end subroutine output_write
 
-    subroutine output_writeHdf5(nStep, t, dt, outputCounter, outputfile, &
-                                V, N, minIdx, maxIdx, strtIdx, stopIdx, domainBeg, domainEnd, dl)
+    subroutine output_writeHdf5(nStep, t, dt, outputCounter, outputfile, blk)
         ! purpose:      Write one hdf5 output file
         !
         ! Inputs:       - outputfile (character) name of the file to write
@@ -134,14 +125,14 @@ contains
         real, intent(in) :: t, dt
         integer, intent(in) :: nStep, outputCounter
         character(len=*), intent(in) :: outputfile
-        integer, dimension(ndim), intent(in) :: N, minIdx, maxIdx, strtIdx, stopIdx
-        real, dimension(ndim), intent(in) :: domainBeg, domainEnd, dl
-        real, intent(in) :: V(nPrimVars, &
-                              minIdx(xdir):maxIdx(xdir), &
-                              minIdx(ydir):maxIdx(ydir))
+        type(gridBlock_t), intent(in) :: blk
         ! local variables
-        real, dimension(N(xdir), N(ydir)) :: dens, velx, vely, velz, pres, eint, gama, ener
-        real, dimension(N(xdir), N(ydir)) :: magp, divb, magx, magy, magz
+        ! Buffers holding the interior of each field, contiguous and
+        ! guard-cell free, ready to hand to hdf5. Allocatable rather than
+        ! automatic so that where they live does not depend on whether the
+        ! compiler puts large local arrays on the stack or the heap.
+        real, allocatable, dimension(:,:) :: dens, velx, vely, velz, pres, eint, gama, ener
+        real, allocatable, dimension(:,:) :: magp, divb, magx, magy, magz
         integer :: error, space_rank
         integer :: i_dim, ii, jj, offsets(ndim)
         integer(HSIZE_T) :: data_dims_1d(1), data_dims_2d(2)
@@ -153,6 +144,21 @@ contains
                           dset_id_dens, dset_id_pres, dset_id_eint, dset_id_gama, &
                           dset_id_ener, &
                           dset_id_magp, dset_id_divb, dset_id_magx, dset_id_magy, dset_id_magz
+
+        !~~~! allocate the field buffers
+        allocate(dens(blk%N(xdir), blk%N(ydir)))
+        allocate(velx(blk%N(xdir), blk%N(ydir)))
+        allocate(vely(blk%N(xdir), blk%N(ydir)))
+        allocate(velz(blk%N(xdir), blk%N(ydir)))
+        allocate(pres(blk%N(xdir), blk%N(ydir)))
+        allocate(eint(blk%N(xdir), blk%N(ydir)))
+        allocate(gama(blk%N(xdir), blk%N(ydir)))
+        allocate(ener(blk%N(xdir), blk%N(ydir)))
+        allocate(magp(blk%N(xdir), blk%N(ydir)))
+        allocate(divb(blk%N(xdir), blk%N(ydir)))
+        allocate(magx(blk%N(xdir), blk%N(ydir)))
+        allocate(magy(blk%N(xdir), blk%N(ydir)))
+        allocate(magz(blk%N(xdir), blk%N(ydir)))
 
         !=! open hdf5 interface
         call h5open_f(error)
@@ -196,8 +202,8 @@ contains
 
         !---! open dataspace for primitive variables
         space_rank = 2 ! number of dimensions in the data space
-        data_dims_2d(1) = N(xdir)
-        data_dims_2d(2) = N(ydir)
+        data_dims_2d(1) = blk%N(xdir)
+        data_dims_2d(2) = blk%N(ydir)
         call h5screate_simple_f(space_rank, data_dims_2d, dspace_id, error)
 
         !\\\\! create datasets for primitive variables
@@ -222,15 +228,15 @@ contains
         ! However, this does not remove the undesired (and presumabley slow)
         ! behavior that the warning is warning us about.
 
-        dens = V(dens_var, strtIdx(xdir):stopIdx(xdir), strtIdx(ydir):stopIdx(ydir))
-        velx = V(velx_var, strtIdx(xdir):stopIdx(xdir), strtIdx(ydir):stopIdx(ydir))
-        vely = V(vely_var, strtIdx(xdir):stopIdx(xdir), strtIdx(ydir):stopIdx(ydir))
-        velz = V(velz_var, strtIdx(xdir):stopIdx(xdir), strtIdx(ydir):stopIdx(ydir))
-        magx = V(magx_var, strtIdx(xdir):stopIdx(xdir), strtIdx(ydir):stopIdx(ydir))
-        magy = V(magy_var, strtIdx(xdir):stopIdx(xdir), strtIdx(ydir):stopIdx(ydir))
-        magz = V(magz_var, strtIdx(xdir):stopIdx(xdir), strtIdx(ydir):stopIdx(ydir))
-        pres = V(pres_var, strtIdx(xdir):stopIdx(xdir), strtIdx(ydir):stopIdx(ydir))
-        eint = V(eint_var, strtIdx(xdir):stopIdx(xdir), strtIdx(ydir):stopIdx(ydir))
+        dens = blk%V(dens_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        velx = blk%V(velx_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        vely = blk%V(vely_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        velz = blk%V(velz_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        magx = blk%V(magx_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        magy = blk%V(magy_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        magz = blk%V(magz_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        pres = blk%V(pres_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        eint = blk%V(eint_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
         ! this code carries a single adiabatic index rather than a per-cell one
         gama = sim_gamma
 
@@ -246,13 +252,13 @@ contains
             offsets(i_dim) = 1
             ii = offsets(xdir)
             jj = offsets(ydir)
-            divb = divb + 1/(2*dl(i_dim))*&
-                    (V(magx_var+i_dim-1,&
-                          strtIdx(xdir)+ii:stopIdx(xdir)+ii,&
-                          strtIdx(ydir)+jj:stopIdx(ydir)+jj)&
-                   - V(magx_var+i_dim-1,&
-                          strtIdx(xdir)-ii:stopIdx(xdir)-ii,&
-                          strtIdx(ydir)-jj:stopIdx(ydir)-jj))
+            divb = divb + 1/(2*blk%dl(i_dim))*&
+                    (blk%V(magx_var+i_dim-1,&
+                           blk%strtIdx(xdir)+ii:blk%stopIdx(xdir)+ii,&
+                           blk%strtIdx(ydir)+jj:blk%stopIdx(ydir)+jj)&
+                   - blk%V(magx_var+i_dim-1,&
+                           blk%strtIdx(xdir)-ii:blk%stopIdx(xdir)-ii,&
+                           blk%strtIdx(ydir)-jj:blk%stopIdx(ydir)-jj))
         end do
 
         !*****! write data to datasets
@@ -302,12 +308,12 @@ contains
         call h5dcreate_f(file_id, "ny", H5T_NATIVE_INTEGER, dspace_id, dset_id_ny, error)
 
         !*****! write datasets
-        call h5dwrite_f(dset_id_xmin, H5T_NATIVE_DOUBLE, domainBeg(xdir), data_dims_1d, error)
-        call h5dwrite_f(dset_id_xmax, H5T_NATIVE_DOUBLE, domainEnd(xdir), data_dims_1d, error)
-        call h5dwrite_f(dset_id_ymin, H5T_NATIVE_DOUBLE, domainBeg(ydir), data_dims_1d, error)
-        call h5dwrite_f(dset_id_ymax, H5T_NATIVE_DOUBLE, domainEnd(ydir), data_dims_1d, error)
-        call h5dwrite_f(dset_id_nx, H5T_NATIVE_INTEGER, N(xdir), data_dims_1d, error)
-        call h5dwrite_f(dset_id_ny, H5T_NATIVE_INTEGER, N(ydir), data_dims_1d, error)
+        call h5dwrite_f(dset_id_xmin, H5T_NATIVE_DOUBLE, blk%domainBeg(xdir), data_dims_1d, error)
+        call h5dwrite_f(dset_id_xmax, H5T_NATIVE_DOUBLE, blk%domainEnd(xdir), data_dims_1d, error)
+        call h5dwrite_f(dset_id_ymin, H5T_NATIVE_DOUBLE, blk%domainBeg(ydir), data_dims_1d, error)
+        call h5dwrite_f(dset_id_ymax, H5T_NATIVE_DOUBLE, blk%domainEnd(ydir), data_dims_1d, error)
+        call h5dwrite_f(dset_id_nx, H5T_NATIVE_INTEGER, blk%N(xdir), data_dims_1d, error)
+        call h5dwrite_f(dset_id_ny, H5T_NATIVE_INTEGER, blk%N(ydir), data_dims_1d, error)
 
         !////! close datasets for xmin, xmax, ymin, ymax, nx, ny
         call h5dclose_f(dset_id_xmin, error)
@@ -328,6 +334,21 @@ contains
 
         !=! close hdf5 interface
         call h5close_f(error)
+
+        !~~~! deallocate the field buffers
+        deallocate(dens)
+        deallocate(velx)
+        deallocate(vely)
+        deallocate(velz)
+        deallocate(pres)
+        deallocate(eint)
+        deallocate(gama)
+        deallocate(ener)
+        deallocate(magp)
+        deallocate(divb)
+        deallocate(magx)
+        deallocate(magy)
+        deallocate(magz)
 
     end subroutine output_writeHdf5
 
