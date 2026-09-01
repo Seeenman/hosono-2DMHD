@@ -1,7 +1,7 @@
 program mhd_driver
 
     use definitions, only: max_string_length
-    use simulation, only: simulation_init
+    use simulation, only: simulation_init, sim_tmax, sim_nstepmax
     use grid
     use initialCondition, only: initialCondition_set
     use output, only: output_write
@@ -56,6 +56,14 @@ program mhd_driver
     lastOutputTime = 0.0
     outputCounter = 0
     call output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, .true., grid_block)
+
+    ! ----------------------------------
+    ! Advance the solution in time up
+    ! to tmax or nstepmax
+    ! ----------------------------------
+    do while ((t < sim_tmax) .and. (nStep < sim_nstepmax))
+        
+    end do
 
     ! ----------------------------------------------------
     ! finalize (deallocate data)
