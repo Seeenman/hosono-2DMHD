@@ -7,7 +7,7 @@ module definitions
     integer, parameter :: xdir = 1
     integer, parameter :: ydir = 2
 
-    ! conservative variables
+    ! conservative variable indices
     integer, parameter :: nConsVars = 8 ! number of conservative variables
     integer, parameter :: dens_var = 1 ! density
     integer, parameter :: momx_var = 2 ! x-momentum
@@ -18,7 +18,7 @@ module definitions
     integer, parameter :: magy_var = 7 ! y-magnetic field
     integer, parameter :: magz_var = 8 ! z-magnetic field
 
-    ! primitive variables
+    ! primitive variable indices
     integer, parameter :: nPrimVars = 10 ! number of conservative variables
     integer, parameter :: velx_var = 2 ! x-velocity
     integer, parameter :: vely_var = 3 ! y-velocity
