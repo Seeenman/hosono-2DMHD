@@ -11,10 +11,7 @@ module output
     ! bundled as a gridBlock_t.
 
     use hdf5
-    use definitions, only: ndim, xdir, ydir, max_string_length, &
-                           dens_var, velx_var, vely_var, velz_var, &
-                           magx_var, magy_var, magz_var, &
-                           pres_var, eint_var
+    use definitions
     use gridBlock, only: gridBlock_t
     use simulation, only: sim_dataFileBaseName, sim_outputFreqStep, sim_outputFreqTime, &
                           sim_outputHdf5, sim_outputAscii, sim_gamma
@@ -237,8 +234,7 @@ contains
         magz = blk%V(magz_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
         pres = blk%V(pres_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
         eint = blk%V(eint_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
-        ! this code carries a single adiabatic index rather than a per-cell one
-        gama = sim_gamma
+        gama = blk%V(gamm_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
 
         ! derived quantities
         ener = dens*(velx**2+vely**2+velz**2)/2 + dens*eint ! total energy (hydro)
