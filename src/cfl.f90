@@ -23,7 +23,7 @@ contains
 
         xMaxSpeed = 0.0
         yMaxSpeed = 0.0
-        !$omp parallel do collapse(2) private(i,j,k,soundSpeed,xLambda,yLambda,BB,B_N_min) reduction(max:xMaxSpeed,yMaxSpeed)
+        !$omp parallel do collapse(2) private(i,j,soundSpeed,xLambda,yLambda,BB,B_N_min) reduction(max:xMaxSpeed,yMaxSpeed)
         do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
             do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
                 if (sim_forceHydro) then
@@ -47,6 +47,6 @@ contains
 
         dt = sim_cfl * min(blk%dl(XDIR)/xMaxSpeed, blk%dl(YDIR)/yMaxSpeed)
 
-    end subroutine cfl_computedt
+    end function cfl_computedt
 
 end module cfl
