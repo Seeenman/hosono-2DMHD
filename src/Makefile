@@ -57,6 +57,7 @@ endif
 
 OBJ := definitions.o readParamFile.o simulation.o gridBlock.o grid.o \
        boundaryConditions.o eos.o convert.o initialCondition.o output.o \
+       eigen.o cfl.o \
        mhd_driver.o
 
 .PHONY: all
