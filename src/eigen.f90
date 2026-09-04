@@ -54,7 +54,7 @@ contains
         B_T1  = V(mag_dirT1) ! first tangential magnetic field component
         B_T2  = V(mag_dirT2) ! second tangential magnetic field component
         p     = max(V(pres_var), sim_smallPressure)
-        gam   = V(gama_var)
+        gam   = V(gamm_var)
         BB    = B_N**2 + B_T1**2 + B_T2**2 ! magnitude of magnetic field squared
 
         ! find wave speeds
@@ -90,49 +90,49 @@ contains
         !! ----------------------
         reigenvecs = 0.0
         ! fast left magnetoacoustic wave
-        reigenvecs(dens_var,  WAVE_FASTLEFT) = alpha_f*rho
-        reigenvecs(vel_dirN,  WAVE_FASTLEFT) = -alpha_f*c_f
-        reigenvecs(vel_dirT1, WAVE_FASTLEFT) = alpha_s*c_s*beta_T1*sgnBn
-        reigenvecs(vel_dirT2, WAVE_FASTLEFT) = alpha_s*c_s*beta_T2*sgnBn
-        reigenvecs(mag_dirT1, WAVE_FASTLEFT) = alpha_s*SQRT(rho)*a*beta_T1
-        reigenvecs(mag_dirT2, WAVE_FASTLEFT) = alpha_s*SQRT(rho)*a*beta_T2
-        reigenvecs(pres_var,  WAVE_FASTLEFT) = alpha_f*rho*a**2
+        reigenvecs(dens_var,  1) = alpha_f*rho
+        reigenvecs(vel_dirN,  1) = -alpha_f*c_f
+        reigenvecs(vel_dirT1, 1) = alpha_s*c_s*beta_T1*sgnBn
+        reigenvecs(vel_dirT2, 1) = alpha_s*c_s*beta_T2*sgnBn
+        reigenvecs(mag_dirT1, 1) = alpha_s*SQRT(rho)*a*beta_T1
+        reigenvecs(mag_dirT2, 1) = alpha_s*SQRT(rho)*a*beta_T2
+        reigenvecs(pres_var,  1) = alpha_f*rho*a**2
         ! Alfven wave left
-        reigenvecs(vel_dirT1, WAVE_ALFNLEFT) = -beta_T2
-        reigenvecs(vel_dirT2, WAVE_ALFNLEFT) = beta_T1
-        reigenvecs(mag_dirT1, WAVE_ALFNLEFT) = -SQRT(rho)*beta_T2*sgnBn
-        reigenvecs(mag_dirT2, WAVE_ALFNLEFT) = SQRT(rho)*beta_T1*sgnBn
+        reigenvecs(vel_dirT1, 2) = -beta_T2
+        reigenvecs(vel_dirT2, 2) = beta_T1
+        reigenvecs(mag_dirT1, 2) = -SQRT(rho)*beta_T2*sgnBn
+        reigenvecs(mag_dirT2, 2) = SQRT(rho)*beta_T1*sgnBn
         ! slow left magnetoacoustic wave
-        reigenvecs(dens_var,  WAVE_SLOWLEFT) = alpha_s*rho
-        reigenvecs(vel_dirN,  WAVE_SLOWLEFT) = -alpha_s*c_s
-        reigenvecs(vel_dirT1, WAVE_SLOWLEFT) = -alpha_f*c_f*beta_T1*sgnBn
-        reigenvecs(vel_dirT2, WAVE_SLOWLEFT) = -alpha_f*c_f*beta_T2*sgnBn
-        reigenvecs(mag_dirT1, WAVE_SLOWLEFT) = -alpha_f*SQRT(rho)*a*beta_T1
-        reigenvecs(mag_dirT2, WAVE_SLOWLEFT) = -alpha_f*SQRT(rho)*a*beta_T2
-        reigenvecs(pres_var,  WAVE_SLOWLEFT) = alpha_s*rho*a**2
+        reigenvecs(dens_var,  3) = alpha_s*rho
+        reigenvecs(vel_dirN,  3) = -alpha_s*c_s
+        reigenvecs(vel_dirT1, 3) = -alpha_f*c_f*beta_T1*sgnBn
+        reigenvecs(vel_dirT2, 3) = -alpha_f*c_f*beta_T2*sgnBn
+        reigenvecs(mag_dirT1, 3) = -alpha_f*SQRT(rho)*a*beta_T1
+        reigenvecs(mag_dirT2, 3) = -alpha_f*SQRT(rho)*a*beta_T2
+        reigenvecs(pres_var,  3) = alpha_s*rho*a**2
         ! middle entropy wave
-        reigenvecs(dens_var,  WAVE_ENTROPY)  = 1.0
+        reigenvecs(dens_var,  4)  = 1.0
         ! slow right magnetoacoustic wave
-        reigenvecs(dens_var,  WAVE_SLOWRGHT) = alpha_s*rho
-        reigenvecs(vel_dirN,  WAVE_SLOWRGHT) = alpha_s*c_s
-        reigenvecs(vel_dirT1, WAVE_SLOWRGHT) = alpha_f*c_f*beta_T1*sgnBn
-        reigenvecs(vel_dirT2, WAVE_SLOWRGHT) = alpha_f*c_f*beta_T2*sgnBn
-        reigenvecs(mag_dirT1, WAVE_SLOWRGHT) = -alpha_f*SQRT(rho)*a*beta_T1
-        reigenvecs(mag_dirT2, WAVE_SLOWRGHT) = -alpha_f*SQRT(rho)*a*beta_T2
-        reigenvecs(pres_var,  WAVE_SLOWRGHT) = alpha_s*rho*a**2
+        reigenvecs(dens_var,  5) = alpha_s*rho
+        reigenvecs(vel_dirN,  5) = alpha_s*c_s
+        reigenvecs(vel_dirT1, 5) = alpha_f*c_f*beta_T1*sgnBn
+        reigenvecs(vel_dirT2, 5) = alpha_f*c_f*beta_T2*sgnBn
+        reigenvecs(mag_dirT1, 5) = -alpha_f*SQRT(rho)*a*beta_T1
+        reigenvecs(mag_dirT2, 5) = -alpha_f*SQRT(rho)*a*beta_T2
+        reigenvecs(pres_var,  5) = alpha_s*rho*a**2
         ! Alfven wave right
-        reigenvecs(vel_dirT1, WAVE_ALFNRGHT) = beta_T2
-        reigenvecs(vel_dirT2, WAVE_ALFNRGHT) = -beta_T1
-        reigenvecs(mag_dirT1, WAVE_ALFNRGHT) = -SQRT(rho)*beta_T2*sgnBn
-        reigenvecs(mag_dirT2, WAVE_ALFNRGHT) = SQRT(rho)*beta_T1*sgnBn
+        reigenvecs(vel_dirT1, 6) = beta_T2
+        reigenvecs(vel_dirT2, 6) = -beta_T1
+        reigenvecs(mag_dirT1, 6) = -SQRT(rho)*beta_T2*sgnBn
+        reigenvecs(mag_dirT2, 6) = SQRT(rho)*beta_T1*sgnBn
         ! fast right magnetoacoustic wave
-        reigenvecs(dens_var,  WAVE_FASTRGHT) = alpha_f*rho
-        reigenvecs(vel_dirN,  WAVE_FASTRGHT) = alpha_f*c_f
-        reigenvecs(vel_dirT1, WAVE_FASTRGHT) = -alpha_s*c_s*beta_T1*sgnBn
-        reigenvecs(vel_dirT2, WAVE_FASTRGHT) = -alpha_s*c_s*beta_T2*sgnBn
-        reigenvecs(mag_dirT1, WAVE_FASTRGHT) = alpha_s*SQRT(rho)*a*beta_T1
-        reigenvecs(mag_dirT2, WAVE_FASTRGHT) = alpha_s*SQRT(rho)*a*beta_T2
-        reigenvecs(pres_var,  WAVE_FASTRGHT) = alpha_f*rho*a**2
+        reigenvecs(dens_var,  7) = alpha_f*rho
+        reigenvecs(vel_dirN,  7) = alpha_f*c_f
+        reigenvecs(vel_dirT1, 7) = -alpha_s*c_s*beta_T1*sgnBn
+        reigenvecs(vel_dirT2, 7) = -alpha_s*c_s*beta_T2*sgnBn
+        reigenvecs(mag_dirT1, 7) = alpha_s*SQRT(rho)*a*beta_T1
+        reigenvecs(mag_dirT2, 7) = alpha_s*SQRT(rho)*a*beta_T2
+        reigenvecs(pres_var,  7) = alpha_f*rho*a**2
 
         !! ----------------------
         !! left eigenvectors
@@ -140,46 +140,46 @@ contains
         leigenvecs = 0.0
         ! note that we store the left eigenvectors in columns not rows of eigenvecs matrix
         ! fast left magnetoacoustic wave
-        leigenvecs(vel_dirN,  WAVE_FASTLEFT) = 1/(2*a**2)*(-alpha_f*c_f)
-        leigenvecs(vel_dirT1, WAVE_FASTLEFT) = 1/(2*a**2)*(alpha_s*c_s*beta_T1*sgnBn)
-        leigenvecs(vel_dirT2, WAVE_FASTLEFT) = 1/(2*a**2)*(alpha_s*c_s*beta_T2*sgnBn)
-        leigenvecs(mag_dirT1, WAVE_FASTLEFT) = 1/(2*a**2)*(alpha_s*a*beta_T1/SQRT(rho))
-        leigenvecs(mag_dirT2, WAVE_FASTLEFT) = 1/(2*a**2)*(alpha_s*a*beta_T2/SQRT(rho))
-        leigenvecs(pres_var,  WAVE_FASTLEFT) = 1/(2*a**2)*(alpha_f/rho)
+        leigenvecs(vel_dirN,  1) = 1/(2*a**2)*(-alpha_f*c_f)
+        leigenvecs(vel_dirT1, 1) = 1/(2*a**2)*(alpha_s*c_s*beta_T1*sgnBn)
+        leigenvecs(vel_dirT2, 1) = 1/(2*a**2)*(alpha_s*c_s*beta_T2*sgnBn)
+        leigenvecs(mag_dirT1, 1) = 1/(2*a**2)*(alpha_s*a*beta_T1/SQRT(rho))
+        leigenvecs(mag_dirT2, 1) = 1/(2*a**2)*(alpha_s*a*beta_T2/SQRT(rho))
+        leigenvecs(pres_var,  1) = 1/(2*a**2)*(alpha_f/rho)
         ! Alfven wave left
-        leigenvecs(vel_dirT1, WAVE_ALFNLEFT) = 0.5*(-beta_T2)
-        leigenvecs(vel_dirT2, WAVE_ALFNLEFT) = 0.5*(beta_T1)
-        leigenvecs(mag_dirT1, WAVE_ALFNLEFT) = 0.5*(-beta_T2*sgnBn/SQRT(rho))
-        leigenvecs(mag_dirT2, WAVE_ALFNLEFT) = 0.5*(beta_T1*sgnBn/SQRT(rho))
+        leigenvecs(vel_dirT1, 2) = 0.5*(-beta_T2)
+        leigenvecs(vel_dirT2, 2) = 0.5*(beta_T1)
+        leigenvecs(mag_dirT1, 2) = 0.5*(-beta_T2*sgnBn/SQRT(rho))
+        leigenvecs(mag_dirT2, 2) = 0.5*(beta_T1*sgnBn/SQRT(rho))
         ! slow left magnetoacoustic wave
-        leigenvecs(vel_dirN,  WAVE_SLOWLEFT) = 1/(2*a**2)*(-alpha_s*c_s)
-        leigenvecs(vel_dirT1, WAVE_SLOWLEFT) = 1/(2*a**2)*(-alpha_f*c_f*beta_T1*sgnBn)
-        leigenvecs(vel_dirT2, WAVE_SLOWLEFT) = 1/(2*a**2)*(-alpha_f*c_f*beta_T2*sgnBn)
-        leigenvecs(mag_dirT1, WAVE_SLOWLEFT) = 1/(2*a**2)*(-alpha_f*a*beta_T1/SQRT(rho))
-        leigenvecs(mag_dirT2, WAVE_SLOWLEFT) = 1/(2*a**2)*(-alpha_f*a*beta_T2/SQRT(rho))
-        leigenvecs(pres_var,  WAVE_SLOWLEFT) = 1/(2*a**2)*(alpha_s/rho)
+        leigenvecs(vel_dirN,  3) = 1/(2*a**2)*(-alpha_s*c_s)
+        leigenvecs(vel_dirT1, 3) = 1/(2*a**2)*(-alpha_f*c_f*beta_T1*sgnBn)
+        leigenvecs(vel_dirT2, 3) = 1/(2*a**2)*(-alpha_f*c_f*beta_T2*sgnBn)
+        leigenvecs(mag_dirT1, 3) = 1/(2*a**2)*(-alpha_f*a*beta_T1/SQRT(rho))
+        leigenvecs(mag_dirT2, 3) = 1/(2*a**2)*(-alpha_f*a*beta_T2/SQRT(rho))
+        leigenvecs(pres_var,  3) = 1/(2*a**2)*(alpha_s/rho)
         ! middle entropy wave
-        leigenvecs(dens_var,  WAVE_ENTROPY)  = 1.0
-        leigenvecs(pres_var,  WAVE_ENTROPY)  = -1/a**2
+        leigenvecs(dens_var,  4)  = 1.0
+        leigenvecs(pres_var,  4)  = -1/a**2
         ! slow right magnetoacoustic wave
-        leigenvecs(vel_dirN,  WAVE_SLOWRGHT) = 1/(2*a**2)*(alpha_s*c_s)
-        leigenvecs(vel_dirT1, WAVE_SLOWRGHT) = 1/(2*a**2)*(alpha_f*c_f*beta_T1*sgnBn)
-        leigenvecs(vel_dirT2, WAVE_SLOWRGHT) = 1/(2*a**2)*(alpha_f*c_f*beta_T2*sgnBn)
-        leigenvecs(mag_dirT1, WAVE_SLOWRGHT) = 1/(2*a**2)*(-alpha_f*a*beta_T1/SQRT(rho))
-        leigenvecs(mag_dirT2, WAVE_SLOWRGHT) = 1/(2*a**2)*(-alpha_f*a*beta_T2/SQRT(rho))
-        leigenvecs(pres_var,  WAVE_SLOWRGHT) = 1/(2*a**2)*(alpha_s/rho)
+        leigenvecs(vel_dirN,  5) = 1/(2*a**2)*(alpha_s*c_s)
+        leigenvecs(vel_dirT1, 5) = 1/(2*a**2)*(alpha_f*c_f*beta_T1*sgnBn)
+        leigenvecs(vel_dirT2, 5) = 1/(2*a**2)*(alpha_f*c_f*beta_T2*sgnBn)
+        leigenvecs(mag_dirT1, 5) = 1/(2*a**2)*(-alpha_f*a*beta_T1/SQRT(rho))
+        leigenvecs(mag_dirT2, 5) = 1/(2*a**2)*(-alpha_f*a*beta_T2/SQRT(rho))
+        leigenvecs(pres_var,  5) = 1/(2*a**2)*(alpha_s/rho)
         ! Alfven wave right
-        leigenvecs(vel_dirT1, WAVE_ALFNRGHT) = 0.5*(beta_T2)
-        leigenvecs(vel_dirT2, WAVE_ALFNRGHT) = 0.5*(-beta_T1)
-        leigenvecs(mag_dirT1, WAVE_ALFNRGHT) = 0.5*(-beta_T2*sgnBn/SQRT(rho))
-        leigenvecs(mag_dirT2, WAVE_ALFNRGHT) = 0.5*(beta_T1*sgnBn/SQRT(rho))
+        leigenvecs(vel_dirT1, 6) = 0.5*(beta_T2)
+        leigenvecs(vel_dirT2, 6) = 0.5*(-beta_T1)
+        leigenvecs(mag_dirT1, 6) = 0.5*(-beta_T2*sgnBn/SQRT(rho))
+        leigenvecs(mag_dirT2, 6) = 0.5*(beta_T1*sgnBn/SQRT(rho))
         ! fast right magnetoacoustic wave
-        leigenvecs(vel_dirN,  WAVE_FASTRGHT) = 1/(2*a**2)*(alpha_f*c_f)
-        leigenvecs(vel_dirT1, WAVE_FASTRGHT) = 1/(2*a**2)*(-alpha_s*c_s*beta_T1*sgnBn)
-        leigenvecs(vel_dirT2, WAVE_FASTRGHT) = 1/(2*a**2)*(-alpha_s*c_s*beta_T2*sgnBn)
-        leigenvecs(mag_dirT1, WAVE_FASTRGHT) = 1/(2*a**2)*(alpha_s*a*beta_T1/SQRT(rho))
-        leigenvecs(mag_dirT2, WAVE_FASTRGHT) = 1/(2*a**2)*(alpha_s*a*beta_T2/SQRT(rho))
-        leigenvecs(pres_var,  WAVE_FASTRGHT) = 1/(2*a**2)*(alpha_f/rho)
+        leigenvecs(vel_dirN,  7) = 1/(2*a**2)*(alpha_f*c_f)
+        leigenvecs(vel_dirT1, 7) = 1/(2*a**2)*(-alpha_s*c_s*beta_T1*sgnBn)
+        leigenvecs(vel_dirT2, 7) = 1/(2*a**2)*(-alpha_s*c_s*beta_T2*sgnBn)
+        leigenvecs(mag_dirT1, 7) = 1/(2*a**2)*(alpha_s*a*beta_T1/SQRT(rho))
+        leigenvecs(mag_dirT2, 7) = 1/(2*a**2)*(alpha_s*a*beta_T2/SQRT(rho))
+        leigenvecs(pres_var,  7) = 1/(2*a**2)*(alpha_f/rho)
 
         if (primorcons=='cons') then
             allocate(dUdV(nConsVars, nConsVars))
@@ -268,39 +268,37 @@ contains
         ! Outputs:      - eigenvals (real) the eigenvalues
         ! ------------------------------------------------------------
         implicit none
-        real, intent(in) :: V(numb_var)
+        real, intent(in) :: V(nPrimVars)
         integer, intent(in) :: dir
-        real :: eigenvals(NUMB_WAVE)
+        real :: eigenvals(7)
         ! local variables
         integer :: dirN
         real :: rho, velN, B_N, BB, p, gam, &
                 c_s, c_f, c_a
 
-        if (dir==XDIR) then
+        if (dir==xdir) then
             dirN  = 0
-        else if (dir==YDIR) then
+        else if (dir==ydir) then
             dirN  = 1
-        else if (dir==ZDIR) then
-            dirN  = 2
         end if
         rho   = max(V(dens_var), sim_smallDensity)
         velN  = V(velx_var+dirN)
         B_N   = V(magx_var+dirN)
         p     = max(V(pres_var), sim_smallPressure)
-        gam   = V(gama_var)
+        gam   = V(gamm_var)
         BB    = V(magx_var)**2 + V(magy_var)**2 + V(magz_var)**2
 
         c_s = eigen_c_fs(gam, rho, p, BB, B_N, -1.0)
         c_f = eigen_c_fs(gam, rho, p, BB, B_N, +1.0)
         c_a = abs(B_N)/SQRT(rho) ! Alfven velocity TODO: why does B_N have absolute value around it?
 
-        eigenvals(WAVE_FASTLEFT) = velN - c_f
-        eigenvals(WAVE_ALFNLEFT) = velN - c_a
-        eigenvals(WAVE_SLOWLEFT) = velN - c_s
-        eigenvals(WAVE_ENTROPY ) = velN
-        eigenvals(WAVE_SLOWRGHT) = velN + c_s
-        eigenvals(WAVE_ALFNRGHT) = velN + c_a
-        eigenvals(WAVE_FASTRGHT) = velN + c_f
+        eigenvals(1) = velN - c_f
+        eigenvals(2) = velN - c_a
+        eigenvals(3) = velN - c_s
+        eigenvals(4) = velN
+        eigenvals(5) = velN + c_s
+        eigenvals(6) = velN + c_a
+        eigenvals(7) = velN + c_f
 
     end function eigen_valsFromPrim
 
@@ -348,7 +346,10 @@ contains
             alpha = 0.0
         end if
         
-        alpha = min(1.0, max(0.0, alpha)) ! square root guard that I don't understand
+        ! square root guard to keep alpha^2 strictly between 0 and 1
+        alpha = min(1.0, max(0.0, alpha)) 
+
+        ! take square root to get final result
         alpha = sqrt(alpha)
 
     end function eigen_alpha_fs
