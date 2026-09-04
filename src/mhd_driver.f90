@@ -1,10 +1,13 @@
 program mhd_driver
 
+    use, intrinsic :: ieee_arithmetic, only: IEEE_IS_NAN
+
     use definitions, only: max_string_length
     use simulation, only: simulation_init, sim_tmax, sim_nstepmax
     use grid
     use initialCondition, only: initialCondition_set
     use output, only: output_write
+    use cfl, only: cfl_computedt
 
     implicit none
 
@@ -47,23 +50,27 @@ program mhd_driver
     call initialCondition_set(paramfile, grid_block)
 
     ! ----------------------------------
-    ! write the initial condition to disk
-    ! ----------------------------------
-    nStep = 0
-    t = 0.0
-    dt = 0.0
-    lastOutputStep = 0
-    lastOutputTime = 0.0
-    outputCounter = 0
-    call output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, .true., grid_block)
-
-    ! ----------------------------------
     ! Advance the solution in time up
     ! to tmax or nstepmax
     ! ----------------------------------
-    do while ((t < sim_tmax) .and. (nStep < sim_nstepmax))
-        
-    end do
+    nStep = 0
+    t = 0.0
+    dt = cfl_computedt(grid_block)
+    call validTimeStep(dt, t, sim_tmax)
+    lastOutputStep = 0
+    lastOutputTime = 0.0
+    outputCounter = 0
+    
+    ! write initial conditions to disk
+    call output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, .true., grid_block)
+
+    ! the main loop
+    ! do while ((t < sim_tmax) .and. (nStep < sim_nstepmax))
+    !     ! update dt based on cfl
+    !     dt = cfl_computedt(grid_block)
+    !     call validTimeStep(dt, t, sim_tmax)
+
+    ! end do
 
     ! ----------------------------------------------------
     ! finalize (deallocate data)
@@ -73,5 +80,31 @@ program mhd_driver
     write(*,*) "=============================================================="
     write(*,*) "Simulation has ended."
     write(*,*) "=============================================================="
+
+contains
+
+    subroutine validTimeStep(delta_t, current_time, tmax)
+        ! Checks
+        ! 1. if t+dt is less than tmax. If not, set dt=tmax-t
+        ! 2. if dt is positive or NAN. If so, quit simulation.
+        implicit none
+        real, intent(in out) :: delta_t
+        real, intent(in) :: current_time, tmax
+
+        if (t+delta_t > tmax) then
+            delta_t = tmax - current_time
+        else if (delta_t < 0.0) then
+            write(*,*) "=========================================================================="
+            write(*,*) "dt is negative. Aborting simulation."
+            write(*,*) "=========================================================================="
+            stop
+        else if (IEEE_IS_NAN(delta_t)) then
+            write(*,*) "=========================================================================="
+            write(*,*) "dt is NAN. Aborting simulation."
+            write(*,*) "=========================================================================="
+            stop
+        end if
+
+    end subroutine validTimeStep
     
 end program mhd_driver
