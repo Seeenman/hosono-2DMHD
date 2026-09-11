@@ -31,6 +31,10 @@ module definitions
     integer, parameter :: max_string_length = 800
     real, parameter :: pi = ACOS(-1.0)
 
+    ! quadruple precision for GP
+    integer, parameter :: qp = SELECTED_REAL_KIND(33)
+    real, parameter :: qp_pi = ACOS(-1.0_qp)
+
 contains
 
 end module definitions
