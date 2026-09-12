@@ -33,7 +33,7 @@ module definitions
 
     ! quadruple precision for GP
     integer, parameter :: qp = SELECTED_REAL_KIND(33)
-    real, parameter :: qp_pi = ACOS(-1.0_qp)
+    real(qp), parameter :: qp_pi = ACOS(-1.0_qp)
 
 contains
 
