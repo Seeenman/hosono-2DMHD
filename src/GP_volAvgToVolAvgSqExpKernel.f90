@@ -68,8 +68,6 @@ contains
                 )
         end do
 
-
-        return
     end function GP_volAvgToVolAvgSqExpKernel_
 
 end module GP_volAvgToVolAvgSqExpKernel
