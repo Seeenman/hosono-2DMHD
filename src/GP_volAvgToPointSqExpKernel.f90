@@ -57,8 +57,6 @@ contains
                 (ERF(r1) - ERF(r2))
         end do
 
-
-        return
     end function GP_volAvgToPointSqExpKernel_
 
 end module GP_volAvgToPointSqExpKernel
