@@ -127,15 +127,14 @@ contains
         
     end subroutine linAlgQuadPrecision_LU
 
-    function linAlgQuadPrecision_solveLinearSystem(A, b) result(x)
+    function linAlgQuadPrecision_solve(A, b) result(x)
         ! Solves the system Ax=b for x.
-        ! If A is not invertible then prints an error message and stops
         implicit none
         real(qp), intent(in)  :: A(:,:), b(:)
         real(qp) :: x(SIZE(A,1))
         real(qp) :: L(SIZE(A,1),SIZE(A,1)), U(SIZE(A,1),SIZE(A,1))
         integer :: p(SIZE(A,1))
-        real(qp) :: det, Pb(SIZE(A,1))
+        real(qp) :: Pb(SIZE(A,1))
         integer :: m, i
 
         m = size(A,1)
@@ -151,6 +150,24 @@ contains
         x = linAlgQuadPrecision_forwardSub(L, Pb) ! first solve Lx' = Pb where x'=Ux
         x = linAlgQuadPrecision_backSub(U, x) ! now solve Ux = x' for x
         
-    end function linAlgQuadPrecision_solveLinearSystem
+    end function linAlgQuadPrecision_solve
+
+    function linAlgQuadPrecision_solveSPD(A, b) result(x)
+        ! Solves the system Ax=b for x when A is symmetric positive definite
+        implicit none
+        real(qp), intent(in)  :: A(:,:), b(:)
+        real(qp) :: x(SIZE(A,1))
+        real(qp) :: R(SIZE(A,1),SIZE(A,1))
+        integer :: m, i
+
+        m = size(A,1)
+
+        R = linAlgQuadPrecision_choleskyDecomp(A)
+
+        ! now we are set up to solve LUx = Ax = b for x where L=R^T and U=R
+        x = linAlgQuadPrecision_forwardSub(TRANSPOSE(R), b) ! first solve Lx' = b where x'=Ux
+        x = linAlgQuadPrecision_backSub(R, x) ! now solve Ux = x' for x
+        
+    end function linAlgQuadPrecision_solveSPD
 
 end module linAlgQuadPrecision
