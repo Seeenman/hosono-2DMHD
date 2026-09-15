@@ -4,6 +4,13 @@ module linAlgQuadPrecision
 
     implicit none
 
+    private
+
+    public :: linAlgQuadPrecision_forwardSub
+    public :: linAlgQuadPrecision_backSub
+    public :: linAlgQuadPrecision_solve
+    public :: linAlgQuadPrecision_solveSPD
+
     interface linAlgQuadPrecision_forwardSub
         module procedure linAlgQuadPrecision_forwardSub_matRHS
         module procedure linAlgQuadPrecision_forwardSub_vecRHS
