@@ -39,7 +39,8 @@ FFLAGS_COMMON := -cpp -Wall -Wextra -Wimplicit-interface -Wuninitialized \
 # Debug flags
 FFLAGS_DEBUG := -O0 -g -ggdb -fbacktrace -fcheck=all \
                 -ffpe-trap=invalid,zero,overflow \
-                -finit-real=snan -finit-integer=-999999
+                -finit-real=snan -finit-integer=-999999 \
+                -fmax-errors=3
 
 # Optimization flags
 FFLAGS_RELEASE := -O3 -march=native -funroll-loops
@@ -56,6 +57,7 @@ else
 endif
 
 OBJ := definitions.o readParamFile.o simulation.o gridBlock.o grid.o \
+       linAlgQuadPrecision.o GP.o \
        boundaryConditions.o eos.o convert.o initialCondition.o output.o \
        eigen.o cfl.o \
        mhd_driver.o

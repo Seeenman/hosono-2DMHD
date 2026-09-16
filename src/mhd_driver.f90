@@ -3,8 +3,9 @@ program mhd_driver
     use, intrinsic :: ieee_arithmetic, only: IEEE_IS_NAN
 
     use definitions, only: max_string_length
-    use simulation, only: simulation_init, sim_tmax, sim_nstepmax
-    use grid
+    use simulation, only: simulation_init, simulation_finalize, sim_tmax, sim_nstepmax
+    use GP, only: GP_init, GP_finalize, GP_nQuadrature, GP_radius
+    use grid, only: grid_init, grid_finalize, grid_block
     use initialCondition, only: initialCondition_set
     use output, only: output_write
     use cfl, only: cfl_computedt
@@ -38,11 +39,16 @@ program mhd_driver
     call simulation_init(paramfile)
 
     ! ----------------------------------------------------
-    ! Set the variables defined inside of the grid
-    ! module by reading them from the parameter file.
-    ! Also allocate the global grid arrays.
+    ! Set the variables defined inside of the GP
+    ! module
     ! ----------------------------------------------------
-    call grid_init(paramfile)
+    call GP_init(paramfile)
+
+    ! ----------------------------------------------------
+    ! Allocate the global grid variables and arrays
+    ! in grid_block 
+    ! ----------------------------------------------------
+    call grid_init(paramfile, GP_radius, GP_nQuadrature)
 
     ! ----------------------------------
     ! set initial conditions
@@ -76,6 +82,8 @@ program mhd_driver
     ! finalize (deallocate data)
     ! ----------------------------------------------------
     call grid_finalize()
+    call GP_finalize()
+    call simulation_finalize()
 
     write(*,*) "=============================================================="
     write(*,*) "Simulation has ended."

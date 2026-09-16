@@ -13,7 +13,6 @@ module grid
     use definitions, only: max_string_length, ndim, xdir, ydir
     use readParamFile, only: readParamFile_int, readParamFile_real
     use gridBlock, only: gridBlock_t, gridBlock_alloc, gridBlock_dealloc
-    use GP, only: GP_radius, GP_nQuadrature
 
     implicit none
 
@@ -22,7 +21,7 @@ module grid
 
 contains
 
-    subroutine grid_init(paramfile)
+    subroutine grid_init(paramfile, GP_radius, GP_nQuadrature)
         ! subroutine:   grid_init
         ! Author:       Sean Riedel
         ! purpose:      To read in (from a parameter file) all grid 
@@ -30,13 +29,17 @@ contains
         !               fill in grid related variables
         ! 
         ! Inputs:       - paramfile (character) name of file to be read
+        !               - GP_radius (integer) radius of GP stencil
+        !               - GP_nQuadrature (integer) number of Gauss-Legendre
+        !                 quadrature points per face
         !               
-        ! Outputs:      - none
+        ! Outputs:      - 
         ! ------------------------------------------------------------
         
         implicit none
         ! subroutine arguments
         character(len=max_string_length), intent(in) :: paramfile
+        integer, intent(in) :: GP_radius, GP_nQuadrature
         ! local variables
         integer :: i, i_dim
 
@@ -94,6 +97,9 @@ contains
         ! ------------------------------------------------------------
         implicit none
         call gridBlock_dealloc(grid_block)
+        write(*,*) "=============================================================="
+        write(*,*) "Grid deallocated."
+        write(*,*) "=============================================================="
     end subroutine grid_finalize
 
 end module grid

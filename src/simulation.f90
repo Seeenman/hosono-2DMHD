@@ -58,5 +58,12 @@ contains
 
     end subroutine simulation_init
 
+    subroutine simulation_finalize()
+        implicit none
+        write(*,*) "=============================================================="
+        write(*,*) "Simulation deallocated (nothing to deallocate)."
+        write(*,*) "=============================================================="
+    end subroutine simulation_finalize
+
 
 end module simulation

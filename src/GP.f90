@@ -8,14 +8,25 @@ module GP
 
     private
 
-    public :: GP_radius, GP_predictionVectors, GP_nQuadrature
+    ! public variables
+    public :: GP_radius
+    public :: GP_nPred
+    public :: GP_nStenc
+    public :: GP_predictionVectors
+    public :: GP_nQuadrature
+    public :: GP_quadratureWeights
+    public :: GP_stencIdxs
+
+    ! public routines
+    public :: GP_init
+    public :: GP_finalize
 
     ! Gaussian Process Stencil Radius (GPR) and prediction vectors
     integer :: GP_radius, GP_nStenc, GP_nPred, GP_nQuadrature
     integer, allocatable :: GP_stencIdxs(:,:)
     real, allocatable :: GP_predictionVectors(:,:)
-    real, allocatable :: GP_quadraturePoints(:,:)
-    real, allocatable :: GP_quadratureWeights(:,:)
+    real, allocatable :: GP_quadraturePoints(:)
+    real, allocatable :: GP_quadratureWeights(:)
 
 contains
 
@@ -30,15 +41,16 @@ contains
         implicit none
         character(len=max_string_length), intent(in) :: paramfile
         ! local variables
-        real(qp), allocatable :: XX(:,:), XXstr(:,:), predVect(:,:), quadraturePoints(:,:)
+        real(qp), allocatable :: XX(:,:), XXstr(:,:), predVect(:,:), quadraturePoints(:)
         real(qp), dimension(ndim) :: domainBeg, domainEnd, nGrid, dl
         real(qp) :: ell
         integer :: i, j, counter
 
         write(*,*) "=============================================================="
-        write(*,*) "Initializing Gaussian Process reconstruction vectors"
-        write(*,*) "and GP radius"
-        write(*,*) ""
+        write(*,*) "Initializing Gaussian Process variables:"
+        write(*,*) "integers: GP_radius, GP_nStenc, GP_nPred, GP_nQuadrature"
+        write(*,*) "integer arrays: GP_stencIdxs"
+        write(*,*) "real arrays: GP_predictionVectors, GP_quadraturePoints, GP_quadratureWeights"
         write(*,*) "--------------------------------------------------------------"
 
         domainBeg(xdir) = readParamFile_quadPrecisionReal(paramfile, "grid_xBeg")
@@ -62,7 +74,7 @@ contains
         counter=0
         do i=-GP_radius, GP_radius
             do j=-GP_radius, GP_radius
-                if (ABS(i)+ABS(j)<=R) then
+                if (ABS(i)+ABS(j)<=GP_radius) then
                     counter = counter + 1
                     GP_stencIdxs(:,counter) = [i,j]
                 end if
@@ -91,7 +103,7 @@ contains
             ! GP spatial order of accuracy = 2*2+1 = 5
             ! use 6th order, 3 point quadrature rule
             quadraturePoints(1) = 1.0_qp/2.0_qp*SQRT(3.0_qp/5.0_qp)
-            quadraturePoints(2) = 0.0_qp_qp
+            quadraturePoints(2) = 0.0_qp
             quadraturePoints(3) = -quadraturePoints(1)
             GP_quadratureWeights(1) = 5.0/18.0
             GP_quadratureWeights(2) = 8.0/18.0
@@ -139,6 +151,10 @@ contains
         deallocate(XXstr)
         deallocate(predVect)
 
+        write(*,*) "--------------------------------------------------------------"
+        write(*,*) "GP variables initialized"
+        write(*,*) "=============================================================="
+
     end subroutine GP_init
 
     subroutine GP_finalize()
@@ -146,6 +162,9 @@ contains
         deallocate(GP_predictionVectors)
         deallocate(GP_stencIdxs)
         deallocate(GP_quadraturePoints)
+        write(*,*) "=============================================================="
+        write(*,*) "GP variables deallocated."
+        write(*,*) "=============================================================="
     end subroutine GP_finalize
 
     function GP_volAvgToVolAvgSqExpKernel(p1, p2, dl, ell) result(kernel)
@@ -183,7 +202,7 @@ contains
 
         ! local variables
         real(qp) :: delta
-        real(qp) :: kernel,
+        real(qp) :: kernel
         real(qp) :: r1, r2, r3, r4, r5, r6
         real(qp) :: ell_over_dl
         integer :: i
@@ -204,7 +223,7 @@ contains
                 (&
                 r1*ERF(r1) + r2*ERF(r2) &
                 + 1._qp/SQRT(qp_pi)*(EXP(r3) + EXP(r4)) &
-                - 2._qp*(r5*ERF(rf) + 1/SQRT(qp_pi)*EXP(r6)) &
+                - 2._qp*(r5*ERF(r5) + 1/SQRT(qp_pi)*EXP(r6)) &
                 )
         end do
 
@@ -243,8 +262,8 @@ contains
 
         ! local variables
         real(qp) :: delta
-        real(qp) :: kernel,
-        real(qp) :: r1, r2, r3, r4, r5, r6
+        real(qp) :: kernel
+        real(qp) :: r1, r2
         real(qp) :: ell_over_dl
         integer :: i
 
@@ -252,8 +271,8 @@ contains
         do i=1,ndim
             delta = (p1(i)-p2(i))/dl(i) ! equation 13 in Bourgeois and Lee
             ell_over_dl = ell/dl(i)
-            r1 = (delta+0.5_qp)/(SQRT(2)*ell_over_dl)
-            r2 = (delta-0.5_qp)/(SQRT(2)*ell_over_dl)
+            r1 = (delta+0.5_qp)/(SQRT(2._qp)*ell_over_dl)
+            r2 = (delta-0.5_qp)/(SQRT(2._qp)*ell_over_dl)
             kernel = kernel*&
                 SQRT(qp_pi/2._qp) * (ell/dl(i)) * &
                 (ERF(r1) - ERF(r2))
@@ -284,7 +303,7 @@ contains
         integer, intent(in) :: nStenc, nPred
         real(qp), intent(in), dimension(ndim, nStenc) :: XX
         real(qp), intent(in), dimension(ndim, nPred) :: XXstr
-        real(qp), intent(in) :: dl(ndim), ell(ndim)
+        real(qp), intent(in) :: dl(ndim), ell
         real(qp) :: predVect(nStenc, nPred)
 
         ! local variables
@@ -293,13 +312,13 @@ contains
 
         do i=1,nStenc
             do j=1,nStenc
-                Kcov(i,j) = GP_volAvgToVolAvgSqExpKernel_(XX(:,i), XX(:,j), dl, ell)
+                Kcov(i,j) = GP_volAvgToVolAvgSqExpKernel(XX(:,i), XX(:,j), dl, ell)
             end do
         end do
 
         do i=1,nStenc
             do j=1,nPred
-                Kstr(i,j) = GP_volAvgToPointSqExpKernel_(XX(:,i), XXstr(:,j), dl, ell)
+                Kstr(i,j) = GP_volAvgToPointSqExpKernel(XX(:,i), XXstr(:,j), dl, ell)
             end do
         end do
 
