@@ -28,7 +28,6 @@ sim_outputAscii = .false.
 ## =============================
 ## grid parameters
 ## =============================
-grid_GPR = 3 # GP stencil radius R. Spatial order of accuracy = 2R+1
 grid_Nx = 128 # number of cells
 grid_Ny = 128 # number of cells
 grid_xBeg =  0.0
@@ -39,6 +38,7 @@ grid_yEnd =  1.0
 ## =============================
 ## GP (Guassian process) parameters
 ## =============================
+GP_radius = 3
 GP_ellOverDelta = 6.0 # ell/min(dx,dy)
 
 ## =============================
