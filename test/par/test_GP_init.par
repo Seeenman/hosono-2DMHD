@@ -1,0 +1,13 @@
+## =============================
+## Minimal parameter file used only by test/test_GP_init.f90.
+## Only the parameters read by GP_init are required.
+## =============================
+grid_Nx = 8
+grid_Ny = 8
+grid_xBeg = 0.0
+grid_xEnd = 1.0
+grid_yBeg = 0.0
+grid_yEnd = 1.0
+
+GP_radius = 2
+GP_ellOverDelta = 2.0 # ell/min(dx,dy)
