@@ -22,7 +22,7 @@ module grid
     implicit none
 
     ! Quadrature
-    integer :: grid_nquad ! number of face quadrature points
+    integer :: grid_nQuadrature ! number of face quadrature points
     real, allocatable :: grid_quadPoints(:), grid_quadWeights(:)
 
     ! The grid for this run. See gridBlock.f90 for data in this struct
@@ -74,17 +74,17 @@ contains
 
         !!!! Set quadrature coordinates and quadrature weights
         !!!! based on GP_radius
-        grid_nquad = GP_radius+1
-        allocate(grid_quadPoints(grid_nquad))
-        allocate(grid_quadWeights(grid_nquad))
-        if (grid_nquad == 2) then
+        grid_nQuadrature = GP_radius+1
+        allocate(grid_quadPoints(grid_nQuadrature))
+        allocate(grid_quadWeights(grid_nQuadrature))
+        if (grid_nQuadrature == 2) then
             ! GP spatial order of accuracy = 2*1+1 = 3
             ! use 4th order, 2 point quadrature rule
             grid_quadPoints(1) = 1.0/2.0/SQRT(3.0)
             grid_quadPoints(2) = -grid_quadPoints(1)
             grid_quadWeights(1) = 1.0/2.0
             grid_quadWeights(2) = 1.0/2.0
-        else if (grid_nquad == 3) then
+        else if (grid_nQuadrature == 3) then
             ! GP spatial order of accuracy = 2*2+1 = 5
             ! use 6th order, 3 point quadrature rule
             grid_quadPoints(1) = 1.0/2.0*SQRT(3.0/5.0)
@@ -93,7 +93,7 @@ contains
             grid_quadWeights(1) = 5.0/18.0
             grid_quadWeights(2) = 8.0/18.0
             grid_quadWeights(3) = 5.0/18.0
-        else if (grid_nquad == 4) then
+        else if (grid_nQuadrature == 4) then
             ! GP spatial order of accuracy = 2*3+1 = 7
             ! use 8th order, 4 point quadrature rule
             grid_quadPoints(1) = 1.0/2.0*SQRT(3.0/7.0+2.0/7.0*SQRT(6.0/5.0))
@@ -109,7 +109,7 @@ contains
         !!!! allocate (and zero) the arrays belonging to the block, now
         !!!! that we know Nx, Ny, the guard cell count, and the
         !!!! number of quadrature points
-        call gridBlock_alloc(grid_block, grid_nquad)
+        call gridBlock_alloc(grid_block, grid_nQuadrature)
 
         ! fill in grid points
         do i=grid_block%minIdx(xdir), grid_block%maxIdx(xdir)
