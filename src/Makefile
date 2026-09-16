@@ -82,6 +82,29 @@ $(TARGET): $(OBJ)
 %.o: %.f90
 	$(FC) $(CPPFLAGS) $(FFLAGS) -c $< -o $@
 
+# ==============================================================
+# Module dependencies.
+# NOTE: this must stay below the "all: $(TARGET)" rule above - Make's
+# default goal (what runs when you type plain `make`) is the target of the
+# first non-"."-prefixed rule in the file, so if this block were placed
+# before "all", `make` with no arguments would silently build only
+# "readParamFile.o" and stop instead of building $(TARGET).
+# ==============================================================
+readParamFile.o: definitions.o
+simulation.o: definitions.o readParamFile.o
+gridBlock.o: definitions.o
+grid.o: definitions.o readParamFile.o gridBlock.o
+linAlgQuadPrecision.o: definitions.o
+GP.o: definitions.o readParamFile.o linAlgQuadPrecision.o
+boundaryConditions.o: definitions.o readParamFile.o simulation.o
+eos.o: simulation.o
+convert.o: definitions.o eos.o simulation.o
+initialCondition.o: definitions.o readParamFile.o eos.o simulation.o boundaryConditions.o convert.o gridBlock.o
+output.o: definitions.o gridBlock.o simulation.o
+eigen.o: definitions.o simulation.o
+cfl.o: definitions.o simulation.o eigen.o gridBlock.o
+mhd_driver.o: definitions.o simulation.o GP.o grid.o initialCondition.o output.o cfl.o
+
 .PHONY: clean
 clean:
 	rm -f $(TARGET) *.o *.mod
