@@ -169,7 +169,7 @@ contains
         write(*,*) "=============================================================="
     end subroutine GP_finalize
 
-    function GP_volAvgToVolAvgSqExpKernel(p1, p2, dl, ell) result(kernel)
+    pure function GP_volAvgToVolAvgSqExpKernel(p1, p2, dl, ell) result(kernel)
         ! function:     GP_volAvgToVolAvgSqExpKernel
         ! purpose:      Returns the covariance between volume averaged data located at p1=(x1,y1) and 
         !               volume averaged data located at p2=(x2,y2) where 
@@ -203,25 +203,29 @@ contains
         real(qp), intent(in) :: ell
 
         ! local variables
-        real(qp) :: delta
+        real(qp) :: sep
         real(qp) :: kernel
+        real(qp) :: sqrt2_ell, two_ell_sq, sqrt_pi_ell_sq
         real(qp) :: r1, r2, r3, r4, r5, r6
-        real(qp) :: ell_over_dl
         integer :: i
-        
+        real(qp), parameter :: sqrt_two = SQRT(2._qp)
+
+        sqrt2_ell = sqrt_two*ell
+        two_ell_sq = 2._qp*ell**2
+        sqrt_pi_ell_sq = SQRT(qp_pi)*ell**2
+
         kernel = 1._qp
         do i=1,ndim
-            delta = (p1(i)-p2(i))/dl(i) ! equation 13 in Bourgeois and Lee
-            ell_over_dl = ell/dl(i)
-            r1 = (delta+1._qp)/(SQRT(2._qp)*ell_over_dl)
-            r2 = (delta-1._qp)/(SQRT(2._qp)*ell_over_dl)
-            r3 = - (delta+1._qp)**2 / (2._qp*ell_over_dl**2)
-            r4 = - (delta-1._qp)**2 / (2._qp*ell_over_dl**2)
-            r5 = delta / (SQRT(2._qp)*ell_over_dl)
-            r6 = - delta**2 / (2._qp*ell_over_dl**2)
+            sep = p1(i)-p2(i) ! numerator of equation 13 in Bourgeois and Lee
+            r1 = (sep+dl(i))/sqrt2_ell
+            r2 = (sep-dl(i))/sqrt2_ell
+            r3 = - (sep+dl(i))**2 / two_ell_sq
+            r4 = - (sep-dl(i))**2 / two_ell_sq
+            r5 = sep/sqrt2_ell
+            r6 = - sep**2 / two_ell_sq
 
             kernel = kernel*&
-                SQRT(qp_pi)*(ell_over_dl)**2 * &
+                sqrt_pi_ell_sq/dl(i)**2 * &
                 (&
                 r1*ERF(r1) + r2*ERF(r2) &
                 + (EXP(r3) + EXP(r4))/SQRT(qp_pi) &
@@ -231,7 +235,7 @@ contains
 
     end function GP_volAvgToVolAvgSqExpKernel
 
-    function GP_volAvgToPointSqExpKernel(p1, p2, dl, ell) result(kernel)
+    pure function GP_volAvgToPointSqExpKernel(p1, p2, dl, ell) result(kernel)
         ! function:     GP_volAvgToPointSqExpKernel
         ! purpose:      Returns the covariance between volume averaged data located at p1=(x1,y1) and 
         !               pointwise data located at p2=(x2,y2) where 
@@ -263,21 +267,25 @@ contains
         real(qp), intent(in) :: ell
 
         ! local variables
-        real(qp) :: delta
+        real(qp) :: sep
         real(qp) :: kernel
+        real(qp) :: sqrt2_ell, half_delta
         real(qp) :: r1, r2
-        real(qp) :: ell_over_dl
         integer :: i
+        real(qp), parameter :: sqrt_two     = SQRT(2._qp)
+        real(qp), parameter :: sqrt_half_pi = SQRT(qp_pi/2._qp)
+
+
+        sqrt2_ell = sqrt_two*ell
 
         kernel = 1._qp
         do i=1,ndim
-            delta = (p1(i)-p2(i))/dl(i) ! equation 13 in Bourgeois and Lee
-            ell_over_dl = ell/dl(i)
-            r1 = (delta+0.5_qp)/(SQRT(2._qp)*ell_over_dl)
-            r2 = (delta-0.5_qp)/(SQRT(2._qp)*ell_over_dl)
+            half_delta = dl(i)/2._qp
+            sep = p1(i)-p2(i) ! numerator of equation 13 in Bourgeois and Lee
+            r1 = (sep+half_delta)/sqrt2_ell
+            r2 = (sep-half_delta)/sqrt2_ell
             kernel = kernel*&
-                SQRT(qp_pi/2._qp) * (ell/dl(i)) * &
-                (ERF(r1) - ERF(r2))
+                sqrt_half_pi * (ell/dl(i)) * (ERF(r1) - ERF(r2))
         end do
 
     end function GP_volAvgToPointSqExpKernel
