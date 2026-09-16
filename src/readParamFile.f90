@@ -8,7 +8,7 @@ module readParamFile
     !   var_name3 = 'a_string' # a string variable
     !   var_name4 = .true. # a logical (boolean) variable
 
-    use definitions, only: max_string_length
+    use definitions, only: max_string_length, qp
 
     implicit none
 
@@ -16,6 +16,7 @@ module readParamFile
 
     public :: readParamFile_int 
     public :: readParamFile_real 
+    public :: readParamFile_quadPrecisionReal
     public :: readParamFile_char 
     public :: readParamFile_logical
 
@@ -62,6 +63,28 @@ contains
         read(var_value_char,*) var_value
 
     end function readParamFile_real
+
+    function readParamFile_quadPrecisionReal(file_name, var_name) result(var_value)
+        ! function:     readParamFile_quadPrecisionReal
+        ! Author:       Sean Riedel
+        ! purpose:      To read in a real type variable from a text file
+        !               with quadruple precision
+        ! 
+        ! Inputs:       - file_name (character) name of file to read
+        !               - var_name (character) name of variable as written in .init file
+        !               
+        ! Outputs:      - var_value (quadruple precision real) value of variable with name var_name
+        ! ------------------------------------------------------------
+        implicit none
+        character(len=*), intent(in) :: file_name, var_name
+        real(qp) :: var_value
+        ! local variables
+        character(len=max_string_length) :: var_value_char
+        
+        call read_value_string(file_name, var_name, var_value_char)
+        read(var_value_char,*) var_value
+
+    end function readParamFile_quadPrecisionReal
     
     function readParamFile_char(file_name, var_name) result(var_value)
         ! function:   readParamFile_char
