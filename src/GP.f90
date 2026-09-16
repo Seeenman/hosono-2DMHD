@@ -66,8 +66,8 @@ contains
 
         GP_radius = readParamFile_int(paramfile, "GP_radius")
         GP_nStenc = 1+2*GP_radius*(GP_radius+1) ! number of cells in the GP stencil
-        GP_nPred = 4*GP_nQuadrature ! number of points at which we need to predict (all of the quadrature points)
         GP_nQuadrature = GP_radius+1 ! number of quadrature points per face
+        GP_nPred = 4*GP_nQuadrature ! number of points at which we need to predict (all of the quadrature points)
 
         ! fill in GP stencil indices
         allocate(GP_stencIdxs(ndim, GP_nStenc))
@@ -90,6 +90,7 @@ contains
         ! based on GP_radius
         allocate(XXstr(ndim, GP_nPred))
         allocate(quadraturePoints(GP_nQuadrature))
+        allocate(GP_quadratureWeights(GP_nQuadrature))
         if (GP_radius == 1) then
             ! GP radius is 1
             ! GP spatial order of accuracy = 2*1+1 = 3
@@ -162,6 +163,7 @@ contains
         deallocate(GP_predictionVectors)
         deallocate(GP_stencIdxs)
         deallocate(GP_quadraturePoints)
+        deallocate(GP_quadratureWeights)
         write(*,*) "=============================================================="
         write(*,*) "GP variables deallocated."
         write(*,*) "=============================================================="
@@ -216,14 +218,14 @@ contains
             r3 = - (delta+1._qp)**2 / (2._qp*ell_over_dl**2)
             r4 = - (delta-1._qp)**2 / (2._qp*ell_over_dl**2)
             r5 = delta / (SQRT(2._qp)*ell_over_dl)
-            r6 = delta**2 / (2._qp*ell_over_dl**2)
+            r6 = - delta**2 / (2._qp*ell_over_dl**2)
 
             kernel = kernel*&
                 SQRT(qp_pi)*(ell_over_dl)**2 * &
                 (&
                 r1*ERF(r1) + r2*ERF(r2) &
-                + 1._qp/SQRT(qp_pi)*(EXP(r3) + EXP(r4)) &
-                - 2._qp*(r5*ERF(r5) + 1/SQRT(qp_pi)*EXP(r6)) &
+                + (EXP(r3) + EXP(r4))/SQRT(qp_pi) &
+                - 2._qp*(r5*ERF(r5) + EXP(r6)/SQRT(qp_pi)) &
                 )
         end do
 
