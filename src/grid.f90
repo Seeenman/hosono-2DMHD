@@ -17,11 +17,9 @@ module grid
     use definitions, only: max_string_length, ndim, xdir, ydir
     use readParamFile, only: readParamFile_int, readParamFile_real
     use gridBlock, only: gridBlock_t, gridBlock_alloc, gridBlock_dealloc
+    use GP, only: GP_radius
 
     implicit none
-
-    ! Gaussian Process Stencil Radius (GPR)
-    integer :: grid_GPR
 
     ! Quadrature
     integer :: grid_nquad ! number of face quadrature points
@@ -57,13 +55,12 @@ contains
         ! read values in from parameter file
         grid_block%N(xdir) = readParamFile_int(paramfile, "grid_Nx")
         grid_block%N(ydir) = readParamFile_int(paramfile, "grid_Ny")
-        grid_GPR = readParamFile_int(paramfile, "grid_GPR")
         grid_block%domainBeg(xdir) = readParamFile_real(paramfile, "grid_xBeg")
         grid_block%domainEnd(xdir) = readParamFile_real(paramfile, "grid_xEnd")
         grid_block%domainBeg(ydir) = readParamFile_real(paramfile, "grid_yBeg")
         grid_block%domainEnd(ydir) = readParamFile_real(paramfile, "grid_yEnd")
 
-        grid_block%NGC = grid_GPR
+        grid_block%NGC = GP_radius
 
         ! set other variables based on what was read in from the paramter file
         do i_dim=1,ndim
@@ -76,8 +73,8 @@ contains
         end do
 
         !!!! Set quadrature coordinates and quadrature weights
-        !!!! based on grid_GPR
-        grid_nquad = grid_GPR+1
+        !!!! based on GP_radius
+        grid_nquad = GP_radius+1
         allocate(grid_quadPoints(grid_nquad))
         allocate(grid_quadWeights(grid_nquad))
         if (grid_nquad == 2) then
