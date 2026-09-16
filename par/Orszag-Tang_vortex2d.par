@@ -37,6 +37,11 @@ grid_yBeg =  0.0
 grid_yEnd =  1.0
 
 ## =============================
+## GP (Guassian process) parameters
+## =============================
+GP_ellOverDelta = 6.0 # ell/min(dx,dy)
+
+## =============================
 ## Initial Conditions (ICs) for
 ## 2D Orszag-Tang vortex MHD
 ## test problem
