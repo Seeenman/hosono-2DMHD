@@ -52,7 +52,7 @@ contains
 
     end subroutine boundaryConditions_apply
 
-    subroutine outflow(UorV, nVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
+    pure subroutine outflow(UorV, nVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
 
         implicit none
 
@@ -88,7 +88,7 @@ contains
 
     end subroutine outflow
 
-    subroutine periodic(UorV, nVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
+    pure subroutine periodic(UorV, nVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
         implicit none
 
         integer, dimension(ndim), intent(in) :: minIdx, maxIdx, strtIdx, stopIdx

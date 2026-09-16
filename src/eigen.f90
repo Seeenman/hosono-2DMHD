@@ -17,7 +17,7 @@ module eigen
 
 contains
 
-    subroutine eigen_vecsFromPrim(V, dir, primorcons, leigenvecs, reigenvecs)
+    pure subroutine eigen_vecsFromPrim(V, dir, primorcons, leigenvecs, reigenvecs)
         implicit none
         real, intent(in) :: V(nPrimVars)
         integer, intent(in) :: dir
@@ -254,7 +254,7 @@ contains
 
     end subroutine eigen_vecsFromPrim
 
-    function eigen_valsFromPrim(V, dir) result(eigenvals)
+    pure function eigen_valsFromPrim(V, dir) result(eigenvals)
         ! function:     eigen_valsFromPrim
         ! Author:       Sean Riedel
         ! purpose:      Given the primitive variables at a cell
@@ -302,7 +302,7 @@ contains
 
     end function eigen_valsFromPrim
 
-    function eigen_c_fs(gam, rho, p, BB, B_N, pm) result(c_fs)
+    pure function eigen_c_fs(gam, rho, p, BB, B_N, pm) result(c_fs)
         ! compute fast (slow) magnetoacoustic speed
         ! pm = +1.0 -> c_f
         ! pm = -1.0 -> c_s
@@ -320,7 +320,7 @@ contains
         
     end function eigen_c_fs
 
-    function eigen_alpha_fs(c_f, c_s, a, BB, B_N, pm) result(alpha)
+    pure function eigen_alpha_fs(c_f, c_s, a, BB, B_N, pm) result(alpha)
         ! pm = +1 -> alpha_f
         ! pm = -1 -> alpha_s
         ! a is the thermal sound speed
@@ -354,7 +354,7 @@ contains
 
     end function eigen_alpha_fs
 
-    function eigen_beta_T(B_T1, B_T2) result(beta)
+    pure function eigen_beta_T(B_T1, B_T2) result(beta)
         implicit none
         real, intent(in) :: B_T1, B_T2
         real :: beta

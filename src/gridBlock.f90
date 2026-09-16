@@ -56,7 +56,7 @@ module gridBlock
 
 contains
 
-    subroutine gridBlock_alloc(blk, nquad)
+    pure subroutine gridBlock_alloc(blk, nquad)
         ! purpose:      Allocate and zero the arrays belonging to a block.
         !               The index bookkeeping and geometry components
         !               (N, minIdx, maxIdx, dl, ...) must already be set.
@@ -106,7 +106,7 @@ contains
 
     end subroutine gridBlock_alloc
 
-    subroutine gridBlock_dealloc(blk)
+    pure subroutine gridBlock_dealloc(blk)
         ! purpose:      Deallocate the arrays belonging to a block
         !
         ! Inputs:       - blk (gridBlock_t) the block to deallocate

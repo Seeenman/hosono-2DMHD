@@ -25,7 +25,7 @@ contains
 
     end function eos_presIdealGas
 
-    function eos_eintIdealGas(pres, dens, gama) result(eint)
+    pure function eos_eintIdealGas(pres, dens, gama) result(eint)
         implicit none
         real, intent(in) :: pres, dens, gama
         real :: eint

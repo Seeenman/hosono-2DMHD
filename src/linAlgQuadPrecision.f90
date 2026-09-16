@@ -33,7 +33,7 @@ module linAlgQuadPrecision
 
 contains
 
-    subroutine linAlgQuadPrecision_LU(A, L, U, p)
+    pure subroutine linAlgQuadPrecision_LU(A, L, U, p)
         ! LU factorization of A via Gaussian elimination with partial pivoting.
         ! Given a square input matrix A, returns the factorization
         ! PA = LU where
@@ -104,7 +104,7 @@ contains
 
     end subroutine linAlgQuadPrecision_LU
 
-    function linAlgQuadPrecision_choleskyDecomp(A) result(R)
+    pure function linAlgQuadPrecision_choleskyDecomp(A) result(R)
         ! Cholesky decomposition of a real symmetric positive definite matrix A.
         !
         ! Returns upper-triangular R such that A = R^T R.
@@ -143,7 +143,7 @@ contains
 
     end function linAlgQuadPrecision_choleskyDecomp
 
-    function linAlgQuadPrecision_forwardSub_matRHS(L,b) result(y)
+    pure function linAlgQuadPrecision_forwardSub_matRHS(L,b) result(y)
         ! Solves an mxm lower-triangular system Ly=b for y.
         ! b is an mxn matrix which corresponds to simultaneously solving
         ! n systems of Ly=b.
@@ -174,7 +174,7 @@ contains
         end do
     end function linAlgQuadPrecision_forwardSub_matRHS
 
-    function linAlgQuadPrecision_forwardSub_vecRHS(L, b) result(y)
+    pure function linAlgQuadPrecision_forwardSub_vecRHS(L, b) result(y)
         ! Solves an mxm lower-triangular system Ly=b for y.
         ! b is an mx1 column vector
         ! The result y has the same shape as b.
@@ -203,7 +203,7 @@ contains
         end do
     end function linAlgQuadPrecision_forwardSub_vecRHS
 
-    function linAlgQuadPrecision_backSub_matRHS(U, y) result(x)
+    pure function linAlgQuadPrecision_backSub_matRHS(U, y) result(x)
         ! Solves an mxm upper-triangular system Ux=y for x
         ! y is an mxn matrix which corresponds to simultaneously solving
         ! n systems of Ux=y.
@@ -234,7 +234,7 @@ contains
         end do
     end function linAlgQuadPrecision_backSub_matRHS
 
-    function linAlgQuadPrecision_backSub_vecRHS(U, y) result(x)
+    pure function linAlgQuadPrecision_backSub_vecRHS(U, y) result(x)
         ! Solves an mxm upper-triangular system Ux=y for x
         ! y is an mx1 column vector
         ! The result x has the same shape as y.
@@ -263,7 +263,7 @@ contains
         end do
     end function linAlgQuadPrecision_backSub_vecRHS
 
-    function linAlgQuadPrecision_solve_matRHS(A, b) result(x)
+    pure function linAlgQuadPrecision_solve_matRHS(A, b) result(x)
         ! Solves the mxm system Ax=b for x.
         ! b is an mxn matrix which corresponds to simultaneously solving
         ! n systems of Ax=b.
@@ -299,7 +299,7 @@ contains
         
     end function linAlgQuadPrecision_solve_matRHS
 
-    function linAlgQuadPrecision_solve_vecRHS(A, b) result(x)
+    pure function linAlgQuadPrecision_solve_vecRHS(A, b) result(x)
         ! Solves the mxm system Ax=b for x.
         ! b is an mx1 column vector
         ! The result x has the same shape as b.
@@ -333,7 +333,7 @@ contains
         
     end function linAlgQuadPrecision_solve_vecRHS
 
-    function linAlgQuadPrecision_solveSPD_matRHS(A, b) result(x)
+    pure function linAlgQuadPrecision_solveSPD_matRHS(A, b) result(x)
         ! Solves the mxm system Ax=b for x when A is symmetric positive definite.
         ! b is an mxn matrix which corresponds to simultaneously solving
         ! n systems of Ax=b.
@@ -364,7 +364,7 @@ contains
         
     end function linAlgQuadPrecision_solveSPD_matRHS
 
-    function linAlgQuadPrecision_solveSPD_vecRHS(A, b) result(x)
+    pure function linAlgQuadPrecision_solveSPD_vecRHS(A, b) result(x)
         ! Solves the mxm system Ax=b for x when A is symmetric positive definite.
         ! b is an mx1 column vector
         ! The result x has the same shape as b.
