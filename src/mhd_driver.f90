@@ -4,7 +4,7 @@ program mhd_driver
 
     use definitions, only: max_string_length
     use simulation, only: simulation_init, simulation_finalize, sim_tmax, sim_nstepmax
-    use GP, only: GP_init, GP_finalize, GP_nQuadrature, GP_radius
+    use GP, only: GP_init, GP_finalize, GP_nQuadratureMax, GP_maxRadius
     use grid, only: grid_init, grid_finalize, grid_block
     use initialCondition, only: initialCondition_set
     use output, only: output_write
@@ -48,7 +48,7 @@ program mhd_driver
     ! Allocate the global grid variables and arrays
     ! in grid_block 
     ! ----------------------------------------------------
-    call grid_init(paramfile, GP_radius, GP_nQuadrature)
+    call grid_init(paramfile, GP_maxRadius, GP_nQuadratureMax)
 
     ! ----------------------------------
     ! set initial conditions
