@@ -61,7 +61,7 @@ contains
     subroutine simulation_finalize()
         implicit none
         write(*,*) "=============================================================="
-        write(*,*) "Simulation deallocated (nothing to deallocate)."
+        write(*,*) "Simulation variables deallocated (nothing to deallocate)."
         write(*,*) "=============================================================="
     end subroutine simulation_finalize
 
