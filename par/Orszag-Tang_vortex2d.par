@@ -38,7 +38,7 @@ grid_yEnd =  1.0
 ## =============================
 ## GP (Guassian process) parameters
 ## =============================
-GP_radius = 3
+GP_maxRadius = 3
 GP_ellOverDelta = 6.0 # ell/min(dx,dy)
 
 ## =============================
