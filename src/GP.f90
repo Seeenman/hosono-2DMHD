@@ -9,11 +9,14 @@ module GP
     private
 
     ! public variables
-    public :: GP_radius
+    public :: GP_maxRadius
     public :: GP_nPred
     public :: GP_nStenc
-    public :: GP_predictionVectors
     public :: GP_nQuadrature
+    public :: GP_nPredMax
+    public :: GP_nStencMax
+    public :: GP_nQuadratureMax
+    public :: GP_predictionVectors
     public :: GP_quadratureWeights
     public :: GP_stencIdxs
 
@@ -21,12 +24,13 @@ module GP
     public :: GP_init
     public :: GP_finalize
 
-    ! Gaussian Process Stencil Radius (GPR) and prediction vectors
-    integer :: GP_radius, GP_nStenc, GP_nPred, GP_nQuadrature
-    integer, allocatable :: GP_stencIdxs(:,:)
-    real, allocatable :: GP_predictionVectors(:,:)
-    real, allocatable :: GP_quadraturePoints(:)
-    real, allocatable :: GP_quadratureWeights(:)
+    ! Gaussian Process Global variables
+    integer :: GP_maxRadius
+    integer:: GP_nStencMax, GP_nPredMax, GP_nQuadratureMax
+    integer, allocatable, dimension(:) :: GP_nStenc, GP_nPred, GP_nQuadrature
+    integer, allocatable :: GP_stencIdxs(:,:,:)
+    real, allocatable :: GP_predictionVectors(:,:,:)
+    real, allocatable, dimension(:,:) :: GP_quadraturePoints, GP_quadratureWeights
 
 contains
 
@@ -44,13 +48,10 @@ contains
         real(qp), allocatable :: XX(:,:), XXstr(:,:), predVect(:,:), quadraturePoints(:)
         real(qp), dimension(ndim) :: domainBeg, domainEnd, nGrid, dl
         real(qp) :: ell
-        integer :: i, j, counter
+        integer :: i, j, rr, counter
 
         write(*,*) "=============================================================="
         write(*,*) "Initializing Gaussian Process variables:"
-        write(*,*) "integers: GP_radius, GP_nStenc, GP_nPred, GP_nQuadrature"
-        write(*,*) "integer arrays: GP_stencIdxs"
-        write(*,*) "real arrays: GP_predictionVectors, GP_quadraturePoints, GP_quadratureWeights"
         write(*,*) "--------------------------------------------------------------"
 
         domainBeg(xdir) = readParamFile_quadPrecisionReal(paramfile, "grid_xBeg")
@@ -64,93 +65,110 @@ contains
         ell = readParamFile_quadPrecisionReal(paramfile, "GP_ellOverDelta")*MINVAL(dl)
         print*, "ell: ", ell
 
-        GP_radius = readParamFile_int(paramfile, "GP_radius")
-        GP_nStenc = 1+2*GP_radius*(GP_radius+1) ! number of cells in the GP stencil
-        GP_nQuadrature = GP_radius+1 ! number of quadrature points per face
-        GP_nPred = 4*GP_nQuadrature ! number of points at which we need to predict (all of the quadrature points)
+        GP_maxRadius = readParamFile_int(paramfile, "GP_maxRadius")
+        allocate(GP_nStenc(GP_maxRadius))
+        allocate(GP_nQuadrature(GP_maxRadius))
+        allocate(GP_nPred(GP_maxRadius))
+        do rr = 1,GP_maxRadius
+            GP_nStenc(rr) = 1+2*rr*(rr+1) ! number of cells in the GP stencil at each order
+            GP_nQuadrature(rr) = rr+1 ! number of quadrature points per face
+            GP_nPred(rr) = 4*GP_nQuadrature(rr) ! number of points at which we need to predict (all of the quadrature points)
+        end do
+        GP_nStencMax = GP_nStenc(GP_maxRadius)
+        GP_nQuadratureMax = GP_nQuadrature(GP_maxRadius)
+        GP_nPredMax = GP_nPred(GP_maxRadius)
 
         ! fill in GP stencil indices
-        allocate(GP_stencIdxs(ndim, GP_nStenc))
-        counter=0
-        do i=-GP_radius, GP_radius
-            do j=-GP_radius, GP_radius
-                if (ABS(i)+ABS(j)<=GP_radius) then
-                    counter = counter + 1
-                    GP_stencIdxs(:,counter) = [i,j]
-                end if
+        allocate(GP_stencIdxs(ndim, GP_nStencMax, GP_maxRadius))
+        GP_stencIdxs = 0
+        do rr=1,GP_maxRadius
+            counter=0
+            do i=-rr, rr
+                do j=-rr, rr
+                    if (ABS(i)+ABS(j)<=rr) then
+                        counter = counter + 1
+                        GP_stencIdxs(:,counter,rr) = [i,j]
+                    end if
+                end do
             end do
         end do
 
-        ! fill in GP training inputs
-        allocate(XX(ndim, GP_nStenc))
-        XX(xdir, :) = GP_stencIdxs(xdir, :)*dl(xdir)
-        XX(ydir, :) = GP_stencIdxs(ydir, :)*dl(ydir)
+        ! Allocate quadrature coordinates and quadrature weights
+        ! based on GP_maxRadius
+        allocate(GP_quadraturePoints(GP_nQuadratureMax, GP_maxRadius))
+        allocate(GP_quadratureWeights(GP_nQuadratureMax, GP_maxRadius))
+        allocate(GP_predictionVectors(GP_nStencMax, GP_nPredMax, GP_maxRadius))
+        GP_quadraturePoints = 0.0 !TODO this might let some bugs through silently
 
-        ! Set quadrature coordinates and quadrature weights
-        ! based on GP_radius
-        allocate(XXstr(ndim, GP_nPred))
-        allocate(quadraturePoints(GP_nQuadrature))
-        allocate(GP_quadratureWeights(GP_nQuadrature))
-        if (GP_radius == 1) then
-            ! GP radius is 1
-            ! GP spatial order of accuracy = 2*1+1 = 3
-            ! use 4th order, 2 point quadrature rule
-            quadraturePoints(1) = 1.0_qp/2.0_qp/SQRT(3.0_qp)
-            quadraturePoints(2) = -quadraturePoints(1)
-            GP_quadratureWeights(1) = 1.0/2.0
-            GP_quadratureWeights(2) = GP_quadratureWeights(1)
-        else if (GP_radius == 2) then
-            ! GP radius is 2
-            ! GP spatial order of accuracy = 2*2+1 = 5
-            ! use 6th order, 3 point quadrature rule
-            quadraturePoints(1) = 1.0_qp/2.0_qp*SQRT(3.0_qp/5.0_qp)
-            quadraturePoints(2) = 0.0_qp
-            quadraturePoints(3) = -quadraturePoints(1)
-            GP_quadratureWeights(1) = 5.0/18.0
-            GP_quadratureWeights(2) = 8.0/18.0
-            GP_quadratureWeights(3) = GP_quadratureWeights(1)
-        else if (GP_radius == 3) then
-            ! GP radius is 3
-            ! GP spatial order of accuracy = 2*3+1 = 7
-            ! use 8th order, 4 point quadrature rule
-            quadraturePoints(1) = 1.0_qp/2.0_qp*SQRT(3.0_qp/7.0_qp+2.0_qp/7.0_qp*SQRT(6.0_qp/5.0_qp))
-            quadraturePoints(2) = 1.0_qp/2.0_qp*SQRT(3.0_qp/7.0_qp-2.0_qp/7.0_qp*SQRT(6.0_qp/5.0_qp))
-            quadraturePoints(3) = -quadraturePoints(2)
-            quadraturePoints(4) = -quadraturePoints(1)
-            GP_quadratureWeights(1) = (18.0-SQRT(30.0))/72.0
-            GP_quadratureWeights(2) = (18.0+SQRT(30.0))/72.0
-            GP_quadratureWeights(3) = GP_quadratureWeights(2)
-            GP_quadratureWeights(4) = GP_quadratureWeights(1)
-        else
-            error stop "GP radius larger than 3 not currently supported"
-        end if
+        do rr=1,GP_maxRadius
+            ! fill in GP training inputs
+            allocate(XX(ndim, GP_nStenc(rr)))
+            allocate(XXstr(ndim, GP_nPred(rr)))
+            allocate(quadraturePoints(GP_nQuadrature(rr)))
+            XX(xdir, :) = GP_stencIdxs(xdir, 1:GP_nStenc(rr),rr)*dl(xdir)
+            XX(ydir, :) = GP_stencIdxs(ydir, 1:GP_nStenc(rr),rr)*dl(ydir)
 
-        ! fill in GP test outputs based on quadrature points
-        ! upper face
-        XXstr(xdir, 0*GP_nQuadrature+1:1*GP_nQuadrature) = quadraturePoints*dl(xdir)
-        XXstr(ydir, 0*GP_nQuadrature+1:1*GP_nQuadrature) = dl(ydir)/2.0_qp
-        ! lower face
-        XXstr(xdir, 1*GP_nQuadrature+1:2*GP_nQuadrature) = quadraturePoints*dl(xdir)
-        XXstr(ydir, 1*GP_nQuadrature+1:2*GP_nQuadrature) = -dl(ydir)/2.0_qp
-        ! right face
-        XXstr(xdir, 2*GP_nQuadrature+1:3*GP_nQuadrature) = dl(xdir)/2.0_qp
-        XXstr(ydir, 2*GP_nQuadrature+1:3*GP_nQuadrature) = quadraturePoints*dl(ydir)
-        ! left face
-        XXstr(xdir, 3*GP_nQuadrature+1:4*GP_nQuadrature) = -dl(xdir)/2.0_qp
-        XXstr(ydir, 3*GP_nQuadrature+1:4*GP_nQuadrature) = quadraturePoints*dl(ydir)
+            ! set quadrature coordinates and quadrature weights
+            ! NOTE: quadarature weights don't have to be quadruple precision
+            if (rr == 1) then
+                ! GP radius of 1
+                ! GP spatial order of accuracy = 2*1+1 = 3
+                ! use 4th order, 2 point quadrature rule
+                quadraturePoints(1) = 1.0_qp/2.0_qp/SQRT(3.0_qp)
+                quadraturePoints(2) = -quadraturePoints(1)
+                GP_quadratureWeights(1, rr) = 1.0/2.0
+                GP_quadratureWeights(2, rr) = GP_quadratureWeights(1, rr)
+            else if (rr == 2) then
+                ! GP radius of 2
+                ! GP spatial order of accuracy = 2*2+1 = 5
+                ! use 6th order, 3 point quadrature rule
+                quadraturePoints(1) = 1.0_qp/2.0_qp*SQRT(3.0_qp/5.0_qp)
+                quadraturePoints(2) = 0.0_qp
+                quadraturePoints(3) = -quadraturePoints(1)
+                GP_quadratureWeights(1, rr) = 5.0/18.0
+                GP_quadratureWeights(2, rr) = 8.0/18.0
+                GP_quadratureWeights(3, rr) = GP_quadratureWeights(1, rr)
+            else if (rr == 3) then
+                ! GP radius of 3
+                ! GP spatial order of accuracy = 2*3+1 = 7
+                ! use 8th order, 4 point quadrature rule
+                quadraturePoints(1) = 1.0_qp/2.0_qp*SQRT(3.0_qp/7.0_qp+2.0_qp/7.0_qp*SQRT(6.0_qp/5.0_qp))
+                quadraturePoints(2) = 1.0_qp/2.0_qp*SQRT(3.0_qp/7.0_qp-2.0_qp/7.0_qp*SQRT(6.0_qp/5.0_qp))
+                quadraturePoints(3) = -quadraturePoints(2)
+                quadraturePoints(4) = -quadraturePoints(1)
+                GP_quadratureWeights(1, rr) = (18.0-SQRT(30.0))/72.0
+                GP_quadratureWeights(2, rr) = (18.0+SQRT(30.0))/72.0
+                GP_quadratureWeights(3, rr) = GP_quadratureWeights(2, rr)
+                GP_quadratureWeights(4, rr) = GP_quadratureWeights(1, rr)
+            else
+                error stop "GP radius larger than 3 not currently supported"
+            end if
 
-        allocate(GP_predictionVectors(GP_nStenc, GP_nPred))
-        allocate(predVect(GP_nStenc, GP_nPred))
-        predVect = GP_volAvgToPointPredVect(XX, XXstr, GP_nStenc, GP_nPred, dl, ell)
-        GP_predictionVectors = REAL(predVect) ! convert from quad precision to double precision
+            ! fill in GP test outputs based on quadrature points
+            ! upper face
+            XXstr(xdir, 0*GP_nQuadrature(rr)+1:1*GP_nQuadrature(rr)) = quadraturePoints*dl(xdir)
+            XXstr(ydir, 0*GP_nQuadrature(rr)+1:1*GP_nQuadrature(rr)) = dl(ydir)/2.0_qp
+            ! lower face
+            XXstr(xdir, 1*GP_nQuadrature(rr)+1:2*GP_nQuadrature(rr)) = quadraturePoints*dl(xdir)
+            XXstr(ydir, 1*GP_nQuadrature(rr)+1:2*GP_nQuadrature(rr)) = -dl(ydir)/2.0_qp
+            ! right face
+            XXstr(xdir, 2*GP_nQuadrature(rr)+1:3*GP_nQuadrature(rr)) = dl(xdir)/2.0_qp
+            XXstr(ydir, 2*GP_nQuadrature(rr)+1:3*GP_nQuadrature(rr)) = quadraturePoints*dl(ydir)
+            ! left face
+            XXstr(xdir, 3*GP_nQuadrature(rr)+1:4*GP_nQuadrature(rr)) = -dl(xdir)/2.0_qp
+            XXstr(ydir, 3*GP_nQuadrature(rr)+1:4*GP_nQuadrature(rr)) = quadraturePoints*dl(ydir)
 
-        allocate(GP_quadraturePoints(GP_nQuadrature))
-        GP_quadraturePoints = REAL(quadraturePoints)
+            allocate(predVect(GP_nStenc(rr), GP_nPred(rr)))
+            predVect = GP_volAvgToPointPredVect(XX, XXstr, GP_nStenc(rr), GP_nPred(rr), dl, ell)
+            GP_predictionVectors(1:GP_nStenc(rr), 1:GP_nPred(rr), rr) = REAL(predVect) ! convert from quad precision to double precision
 
-        deallocate(quadraturePoints)
-        deallocate(XX)
-        deallocate(XXstr)
-        deallocate(predVect)
+            GP_quadraturePoints(1:GP_nQuadrature(rr), rr) = REAL(quadraturePoints)
+
+            deallocate(quadraturePoints)
+            deallocate(XX)
+            deallocate(XXstr)
+            deallocate(predVect)
+        end do
 
         write(*,*) "--------------------------------------------------------------"
         write(*,*) "GP variables initialized"
@@ -164,6 +182,9 @@ contains
         deallocate(GP_stencIdxs)
         deallocate(GP_quadraturePoints)
         deallocate(GP_quadratureWeights)
+        deallocate(GP_nStenc)
+        deallocate(GP_nQuadrature)
+        deallocate(GP_nPred)
         write(*,*) "=============================================================="
         write(*,*) "GP variables deallocated."
         write(*,*) "=============================================================="
