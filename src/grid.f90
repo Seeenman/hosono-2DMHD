@@ -21,7 +21,7 @@ module grid
 
 contains
 
-    subroutine grid_init(paramfile, GP_radius, GP_nQuadrature)
+    subroutine grid_init(paramfile, GP_maxRadius, GP_nQuadratureMax)
         ! subroutine:   grid_init
         ! Author:       Sean Riedel
         ! purpose:      To read in (from a parameter file) all grid 
@@ -29,8 +29,8 @@ contains
         !               fill in grid related variables
         ! 
         ! Inputs:       - paramfile (character) name of file to be read
-        !               - GP_radius (integer) radius of GP stencil
-        !               - GP_nQuadrature (integer) number of Gauss-Legendre
+        !               - GP_maxRadius (integer) max radius of GP stencil
+        !               - GP_nQuadratureMax (integer) max number of Gauss-Legendre
         !                 quadrature points per face
         !               
         ! Outputs:      - 
@@ -39,7 +39,7 @@ contains
         implicit none
         ! subroutine arguments
         character(len=max_string_length), intent(in) :: paramfile
-        integer, intent(in) :: GP_radius, GP_nQuadrature
+        integer, intent(in) :: GP_maxRadius, GP_nQuadratureMax
         ! local variables
         integer :: i, i_dim
 
@@ -55,7 +55,7 @@ contains
         grid_block%domainBeg(ydir) = readParamFile_real(paramfile, "grid_yBeg")
         grid_block%domainEnd(ydir) = readParamFile_real(paramfile, "grid_yEnd")
 
-        grid_block%NGC = GP_radius
+        grid_block%NGC = GP_maxRadius
 
         ! set other variables based on what was read in from the paramter file
         do i_dim=1,ndim
@@ -70,7 +70,7 @@ contains
         !!!! allocate (and zero) the arrays belonging to the block, now
         !!!! that we know Nx, Ny, the guard cell count, and the
         !!!! number of quadrature points
-        call gridBlock_alloc(grid_block, GP_nQuadrature)
+        call gridBlock_alloc(grid_block, GP_nQuadratureMax)
 
         ! fill in grid points
         do i=grid_block%minIdx(xdir), grid_block%maxIdx(xdir)
