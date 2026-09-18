@@ -26,7 +26,7 @@ FFLAGS := -cpp -Wall -Wextra -Wimplicit-interface -Wuninitialized \
 SRC_DIR := ../src
 
 # src/ modules the tests depend on
-SRC_OBJ := definitions.o readParamFile.o linAlgQuadPrecision.o GP.o
+SRC_OBJ := grid.o gridBlock.o definitions.o readParamFile.o linAlgQuadPrecision.o GP.o
 
 # local test-support modules
 SUPPORT_OBJ := assert.o
@@ -50,7 +50,9 @@ test: $(TEST_EXES)
 # module dependencies (so make compiles prerequisites before dependents)
 readParamFile.o: definitions.o
 linAlgQuadPrecision.o: definitions.o
+gridBlock.o: definitions.o
 GP.o: definitions.o readParamFile.o linAlgQuadPrecision.o
+grid.o: definitions.o readParamFile.o gridBlock.o
 $(TEST_SRCS:.f90=.o): assert.o $(SRC_OBJ)
 
 %.o: $(SRC_DIR)/%.f90
