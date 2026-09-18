@@ -161,7 +161,7 @@ contains
             allocate(predVect(GP_nStenc(rr), GP_nPred(rr)))
             predVect = GP_volAvgToPointPredVect(XX, XXstr, GP_nStenc(rr), GP_nPred(rr), dl, ell)
 
-            make 1-norm of each individual prediction vector equal to 1
+            ! make 1-norm of each individual prediction vector equal to 1
             do i=1,GP_nPred(rr)
                 predVect(:,i) = predVect(:,i)/SUM(predVect(:,i))
             end do
