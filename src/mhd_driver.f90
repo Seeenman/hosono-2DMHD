@@ -9,6 +9,7 @@ program mhd_driver
     use initialCondition, only: initialCondition_set
     use output, only: output_write
     use cfl, only: cfl_computedt
+    ! use reconstruct, only: reconstruct_faceValsWithGP
 
     implicit none
 
@@ -54,6 +55,8 @@ program mhd_driver
     ! set initial conditions
     ! ----------------------------------
     call initialCondition_set(paramfile, grid_block)
+
+    ! call reconstruct_faceValsWithGP(grid_block, 2)
 
     ! ----------------------------------
     ! Advance the solution in time up
