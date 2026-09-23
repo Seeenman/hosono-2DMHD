@@ -2,7 +2,6 @@ module boundaryConditions
 
 
     use definitions, only: ndim, xdir, ydir
-    use readParamFile, only: readParamFile_char
     use simulation, only: sim_BC
 
     implicit none
