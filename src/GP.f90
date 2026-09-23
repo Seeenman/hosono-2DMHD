@@ -49,6 +49,7 @@ contains
         real(qp), dimension(ndim) :: domainBeg, domainEnd, nGrid, dl
         real(qp) :: ell
         integer :: i, j, rr, counter
+        integer :: nq, np, ns
 
         write(*,*) "=============================================================="
         write(*,*) "Initializing Gaussian Process variables:"
@@ -101,12 +102,15 @@ contains
         GP_quadraturePoints = 0.0 !TODO this might let some bugs through silently
 
         do rr=1,GP_maxRadius
+            nq = GP_nQuadrature(rr)
+            ns = GP_nStenc(rr)
+            np = GP_nPred(rr)
             ! fill in GP training inputs
-            allocate(XX(ndim, GP_nStenc(rr)))
-            allocate(XXstr(ndim, GP_nPred(rr)))
-            allocate(quadraturePoints(GP_nQuadrature(rr)))
-            XX(xdir, :) = GP_stencIdxs(xdir, 1:GP_nStenc(rr),rr)*dl(xdir)
-            XX(ydir, :) = GP_stencIdxs(ydir, 1:GP_nStenc(rr),rr)*dl(ydir)
+            allocate(XX(ndim, ns))
+            allocate(XXstr(ndim, np))
+            allocate(quadraturePoints(nq))
+            XX(xdir, :) = GP_stencIdxs(xdir, 1:ns,rr)*dl(xdir)
+            XX(ydir, :) = GP_stencIdxs(ydir, 1:ns,rr)*dl(ydir)
 
             ! set quadrature coordinates and quadrature weights
             ! NOTE: quadarature weights don't have to be quadruple precision
@@ -146,29 +150,29 @@ contains
 
             ! fill in GP test outputs based on quadrature points
             ! upper face
-            XXstr(xdir, 0*GP_nQuadrature(rr)+1:1*GP_nQuadrature(rr)) = quadraturePoints*dl(xdir)
-            XXstr(ydir, 0*GP_nQuadrature(rr)+1:1*GP_nQuadrature(rr)) = dl(ydir)/2.0_qp
+            XXstr(xdir, 0*nq+1:1*nq) = quadraturePoints*dl(xdir)
+            XXstr(ydir, 0*nq+1:1*nq) = dl(ydir)/2.0_qp
             ! lower face
-            XXstr(xdir, 1*GP_nQuadrature(rr)+1:2*GP_nQuadrature(rr)) = quadraturePoints*dl(xdir)
-            XXstr(ydir, 1*GP_nQuadrature(rr)+1:2*GP_nQuadrature(rr)) = -dl(ydir)/2.0_qp
+            XXstr(xdir, 1*nq+1:2*nq) = quadraturePoints*dl(xdir)
+            XXstr(ydir, 1*nq+1:2*nq) = -dl(ydir)/2.0_qp
             ! right face
-            XXstr(xdir, 2*GP_nQuadrature(rr)+1:3*GP_nQuadrature(rr)) = dl(xdir)/2.0_qp
-            XXstr(ydir, 2*GP_nQuadrature(rr)+1:3*GP_nQuadrature(rr)) = quadraturePoints*dl(ydir)
+            XXstr(xdir, 2*nq+1:3*nq) = dl(xdir)/2.0_qp
+            XXstr(ydir, 2*nq+1:3*nq) = quadraturePoints*dl(ydir)
             ! left face
-            XXstr(xdir, 3*GP_nQuadrature(rr)+1:4*GP_nQuadrature(rr)) = -dl(xdir)/2.0_qp
-            XXstr(ydir, 3*GP_nQuadrature(rr)+1:4*GP_nQuadrature(rr)) = quadraturePoints*dl(ydir)
+            XXstr(xdir, 3*nq+1:4*nq) = -dl(xdir)/2.0_qp
+            XXstr(ydir, 3*nq+1:4*nq) = quadraturePoints*dl(ydir)
 
-            allocate(predVect(GP_nStenc(rr), GP_nPred(rr)))
-            predVect = GP_volAvgToPointPredVect(XX, XXstr, GP_nStenc(rr), GP_nPred(rr), dl, ell)
+            allocate(predVect(ns, np))
+            predVect = GP_volAvgToPointPredVect(XX, XXstr, ns, np, dl, ell)
 
             ! make 1-norm of each individual prediction vector equal to 1
-            do i=1,GP_nPred(rr)
+            do i=1,np
                 predVect(:,i) = predVect(:,i)/SUM(predVect(:,i))
             end do
 
             ! convert from quad precision to double precision
-            GP_predictionVectors(1:GP_nStenc(rr), 1:GP_nPred(rr), rr) = REAL(predVect) 
-            GP_quadraturePoints(1:GP_nQuadrature(rr), rr) = REAL(quadraturePoints)
+            GP_predictionVectors(1:ns, 1:np, rr) = REAL(predVect) 
+            GP_quadraturePoints(1:nq, rr) = REAL(quadraturePoints)
 
             deallocate(quadraturePoints)
             deallocate(XX)
