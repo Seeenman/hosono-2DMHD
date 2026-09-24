@@ -145,7 +145,7 @@ contains
                 GP_quadratureWeights(3, rr) = GP_quadratureWeights(2, rr)
                 GP_quadratureWeights(4, rr) = GP_quadratureWeights(1, rr)
             else
-                error stop "GP radius larger than 3 not currently supported"
+                error stop ": GP radius larger than 3 not currently supported"
             end if
 
             ! fill in GP test outputs based on quadrature points
