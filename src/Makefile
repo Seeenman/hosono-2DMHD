@@ -103,6 +103,7 @@ initialCondition.o: definitions.o readParamFile.o eos.o simulation.o boundaryCon
 output.o: definitions.o gridBlock.o simulation.o
 eigen.o: definitions.o simulation.o
 cfl.o: definitions.o simulation.o eigen.o gridBlock.o
+reconstruct.o: definitions.o gridBlock.o GP.o
 mhd_driver.o: definitions.o simulation.o GP.o grid.o initialCondition.o output.o cfl.o reconstruct.o
 
 .PHONY: clean
