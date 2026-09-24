@@ -1,0 +1,56 @@
+## =============================
+## name the simulation and data files
+## =============================
+sim_dataFileBaseName = 'data/OTvortex2D_default'
+
+## =============================
+## simulation parameters
+## =============================
+sim_gamma = 1.66666666666666666
+sim_smallPressure = 1.0e-12
+sim_smallEnergy = 1.0e-12
+sim_smallDensity = 1.0e-12
+sim_smallB = 1.0e-12
+sim_riemannSolver = 'hllc'
+sim_cfl = 0.8
+sim_tmax = 1.0
+sim_nstepmax = 1000000
+sim_forceHydro = .false.
+
+## =============================
+## input/output parameters
+## =============================
+sim_outputFreqTime = 0.02 # positive real number. Negative or zero if not used
+sim_outputFreqStep = 0 # positive integer. Negative or zero if not used
+sim_outputHdf5 = .true. 
+sim_outputAscii = .false.
+
+## =============================
+## grid parameters
+## =============================
+grid_Nx = 128 # number of cells
+grid_Ny = 128 # number of cells
+grid_xBeg =  0.0
+grid_xEnd =  1.0
+grid_yBeg =  0.0
+grid_yEnd =  1.0
+
+## =============================
+## GP (Guassian process) parameters
+## =============================
+GP_maxRadius = 3
+GP_ellOverDelta = 6.0 # ell/min(dx,dy)
+
+## =============================
+## Initial Conditions (ICs) for
+## 2D Orszag-Tang vortex MHD
+## test problem
+## =============================
+IC_type = 'OrszagTang2d'
+IC_U0 = 1.0
+IC_dens = 1.0
+
+## =============================
+## Boundary Conditions (BCs)
+## =============================
+sim_BC = 'periodic'

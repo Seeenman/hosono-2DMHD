@@ -7,6 +7,7 @@ program test_template
     implicit none
 
     character(len=max_string_length) :: paramfile
+    integer :: exitStat
 
     paramfile = "par/test_template.par"
 

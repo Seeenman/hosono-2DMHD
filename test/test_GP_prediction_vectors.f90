@@ -3,8 +3,7 @@ program test_GP_prediction_vectors
 
     use definitions, only: max_string_length
     use GP, only: GP_predictionVectors, GP_init, GP_finalize, GP_maxRadius, &
-        GP_nStenc, GP_nStencMax, GP_nPred, GP_nPredMax
-    use grid, only: grid_init, grid_finalize
+        GP_nStencMax, GP_nPred
     use assert, only: assert_close, assert_summary
 
     implicit none
