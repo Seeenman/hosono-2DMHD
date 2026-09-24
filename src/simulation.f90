@@ -1,7 +1,7 @@
 module simulation
 
-    use readParamFile, only: readParamFile_int, readParamFile_real, readParamFile_char, readParamFile_logical
     use definitions, only: max_string_length
+    use readParamFile, only: readParamFile_int, readParamFile_real, readParamFile_char, readParamFile_logical
 
     implicit none
 
