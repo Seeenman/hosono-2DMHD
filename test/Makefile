@@ -69,6 +69,9 @@ $(TEST_SRCS:.f90=.o): assert.o $(SRC_OBJ)
 
 %.ex: %.o $(SRC_OBJ) $(SUPPORT_OBJ)
 	$(FC) $(FFLAGS) -o $@ $^
+	@echo "============="
+	@echo "===SUCCESS==="
+	@echo "============="
 
 .PHONY: clean
 clean:

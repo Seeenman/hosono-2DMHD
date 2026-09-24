@@ -1,0 +1,58 @@
+ ==============================================================
+ Initializing Gaussian Process variables:
+ --------------------------------------------------------------
+ grid_xBeg set to   0.0
+ grid_xEnd set to   1.0
+ grid_yBeg set to   0.0
+ grid_yEnd set to   1.0
+ grid_Nx set to  128
+ grid_Ny set to  128
+ GP_ellOverDelta set to  6.0
+ ell:    4.68750000000000000000000000000000000E-0002
+ GP_maxRadius set to  3
+ --------------------------------------------------------------
+ GP variables initialized
+ ==============================================================
+ ==============================================================
+ Initializing grid
+ --------------------------------------------------------------
+ grid_Nx set to  128
+ grid_Ny set to  128
+ grid_xBeg set to   0.0
+ grid_xEnd set to   1.0
+ grid_yBeg set to   0.0
+ grid_yEnd set to   1.0
+ --------------------------------------------------------------
+ Grid initialized
+ ==============================================================
+ ==============================================================
+ Initializing simulation
+ --------------------------------------------------------------
+ sim_smallB set to  1.0e-12
+ sim_smallPressure set to  1.0e-12
+ sim_smallDensity set to  1.0e-12
+ sim_smallEnergy set to  1.0e-12
+ sim_gamma set to  1.66666666666666666
+ sim_riemannSolver set to  'hllc'
+ sim_cfl set to  0.8
+ sim_tmax set to  1.0
+ sim_nstepmax set to  1000000
+ sim_BC set to  'periodic'
+ sim_dataFileBaseName set to  'data/OTvortex2D_default'
+ sim_outputFreqTime set to  0.02
+ sim_outputFreqStep set to  0
+ sim_outputHdf5 set to  .true.
+ sim_outputAscii set to  .false.
+ sim_forceHydro set to  .false.
+ --------------------------------------------------------------
+ Simulation initialized
+ ==============================================================
+ ==============================================================
+ Setting initial conditions
+ --------------------------------------------------------------
+ IC_type set to  'OrszagTang2d'
+ IC_U0 set to  1.0
+ IC_dens set to  1.0
+ --------------------------------------------------------------
+ Initial conditions set
+ ==============================================================
