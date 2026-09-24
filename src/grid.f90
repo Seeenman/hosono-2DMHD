@@ -55,7 +55,7 @@ contains
         grid_block%domainBeg(ydir) = readParamFile_real(paramfile, "grid_yBeg")
         grid_block%domainEnd(ydir) = readParamFile_real(paramfile, "grid_yEnd")
 
-        grid_block%NGC = GP_maxRadius
+        grid_block%NGC = GP_maxRadius+1
 
         ! set other variables based on what was read in from the paramter file
         do i_dim=1,ndim

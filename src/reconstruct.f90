@@ -3,7 +3,7 @@ module reconstruct
     use definitions, only: ndim, xdir, ydir, nConsVars
     use gridBlock, only: gridBlock_t
     use GP, only: GP_stencIdxs, GP_nStenc, GP_nPred, GP_predictionVectors, &
-        GP_nQuadrature
+        GP_nQuadrature, GP_maxRadius
 
     implicit none
 
@@ -47,6 +47,8 @@ contains
             blk%lowerFace(:, ydir, 1, :,:) = blk%U(:,:,:)
             blk%upperFace(:, xdir, 1, :,:) = blk%U(:,:,:)
             blk%lowerFace(:, xdir, 1, :,:) = blk%U(:,:,:)
+        else if (radius > GP_maxRadius) then
+            error stop ": GP radius larger than 3 not currently supported"
         else
             allocate(stencil_data(GP_nStenc(radius), nConsVars))
             allocate(faceVals(GP_nPred(radius), nConsVars))
