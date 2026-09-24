@@ -1,9 +1,9 @@
 program test_reconstruct_faceValsWithGP
     ! program:      test_reconstruct_faceValsWithGP
 
-    use definitions, only: max_string_length, xdir, ydir
+    use definitions, only: max_string_length, north, south, east, west
     use assert, only: assert_close, assert_summary
-    use GP, only: GP_init, GP_finalize, GP_nQuadratureMax, GP_maxRadius
+    use GP, only: GP_init, GP_finalize, GP_nQuadratureMax, GP_maxRadius, GP_nQuadrature
     use grid, only: grid_init, grid_finalize, grid_block
     use gridBlock, only: gridBlock_t
     use initialCondition, only: initialCondition_set
@@ -26,15 +26,15 @@ program test_reconstruct_faceValsWithGP
 
     call initialCondition_set(paramfile, grid_block)
 
-    radius = 4
+    ! reconstruct every face of every cell with the same GP radius
+    radius = 3
+    grid_block%scheme = radius
 
-    call reconstruct_faceValsWithGP(grid_block, radius)
+    call reconstruct_faceValsWithGP(grid_block)
     i = 10
     j = 10
-    vv = 3
-    call print_faceValGrid(grid_block, vv, i, j, radius+1)
-    ! call reconstruct_faceValsWithGP(grid_block, 2)
-    ! call reconstruct_faceValsWithGP(grid_block, 3)
+    vv = 2
+    call print_faceValGrid(grid_block, vv, i, j, GP_nQuadrature(radius))
 
     call simulation_finalize()
     call grid_finalize()
@@ -52,7 +52,7 @@ contains
         !            inside the face they belong to, so the two Riemann states
         !            on a shared face sit on either side of the line.
         !
-        ! Inputs:    - blk (gridBlock_t) block holding U, lowerFace, upperFace
+        ! Inputs:    - blk (gridBlock_t) block holding U and faceVals
         !            - vv (integer) index of the conserved variable to print
         !            - ic, jc (integer) indices of the center cell
         !            - nq (integer) number of quadrature points per face
@@ -101,20 +101,20 @@ contains
                 i = ic - 1 + c
                 col0 = c*(cw+1) + 1
 
-                ! upper (top) and lower (bottom) y faces
+                ! north (top) and south (bottom) faces
                 tw = nq*vw + (nq-1)*2
                 strt = col0 + 1 + (cw - tw)/2
                 do p = 0, nq-1
                     k = nq - p
-                    write(lines(line0+1)(strt+p*(vw+2):strt+p*(vw+2)+vw-1), vfmt) blk%upperFace(vv, ydir, k, i, j)
-                    write(lines(line0+ch)(strt+p*(vw+2):strt+p*(vw+2)+vw-1), vfmt) blk%lowerFace(vv, ydir, k, i, j)
+                    write(lines(line0+1)(strt+p*(vw+2):strt+p*(vw+2)+vw-1), vfmt) blk%faceVals(vv, k, north, i, j)
+                    write(lines(line0+ch)(strt+p*(vw+2):strt+p*(vw+2)+vw-1), vfmt) blk%faceVals(vv, k, south, i, j)
                 end do
 
-                ! lower (left) and upper (right) x faces
+                ! west (left) and east (right) faces
                 do k = 1, nq
                     m = line0 + 2 + (nm - nq)/2 + k
-                    write(lines(m)(col0+2:col0+1+vw), vfmt) blk%lowerFace(vv, xdir, k, i, j)
-                    write(lines(m)(col0+cw-vw:col0+cw-1), vfmt) blk%upperFace(vv, xdir, k, i, j)
+                    write(lines(m)(col0+2:col0+1+vw), vfmt) blk%faceVals(vv, k, west, i, j)
+                    write(lines(m)(col0+cw-vw:col0+cw-1), vfmt) blk%faceVals(vv, k, east, i, j)
                 end do
 
                 ! cell average in the center
@@ -130,8 +130,8 @@ contains
         write(*,'(A,I0,A,I0,A,I0,A,I0,A)') "U(", vv, ",:,:) and its face values on the 3x3 cells centered on (i,j) = (", &
             ic, ",", jc, ") with ", nq, " quadrature points per face"
         write(*,'(A)') "  i increases to the right, j increases upward"
-        write(*,'(A)') "  top/bottom of each cell: upperFace/lowerFace(vv, ydir, k, i, j), k = nq..1 from left to right"
-        write(*,'(A)') "  left/right of each cell: lowerFace/upperFace(vv, xdir, k, i, j), k = 1..nq from top to bottom"
+        write(*,'(A)') "  top/bottom of each cell: faceVals(vv, k, north/south, i, j), k = nq..1 from left to right"
+        write(*,'(A)') "  left/right of each cell: faceVals(vv, k, west/east, i, j), k = 1..nq from top to bottom"
         do m = 1, nlines
             write(*,'(A)') lines(m)
         end do

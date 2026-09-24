@@ -7,6 +7,13 @@ module definitions
     integer, parameter :: xdir = 1
     integer, parameter :: ydir = 2
 
+    ! face directions
+    integer, parameter :: nfaces = 4
+    integer, parameter :: north  = 1
+    integer, parameter :: south  = 2
+    integer, parameter :: east   = 3
+    integer, parameter :: west   = 4
+
     ! conservative variable indices
     integer, parameter :: nConsVars = 8 ! number of conservative variables
     integer, parameter :: dens_var = 1 ! density

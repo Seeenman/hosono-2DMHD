@@ -9,7 +9,7 @@ program mhd_driver
     use initialCondition, only: initialCondition_set
     use output, only: output_write
     use cfl, only: cfl_computedt
-    ! use reconstruct, only: reconstruct_faceValsWithGP
+    use reconstruct, only: reconstruct_faceValsWithGP
 
     implicit none
 
@@ -50,13 +50,14 @@ program mhd_driver
     ! in grid_block 
     ! ----------------------------------------------------
     call grid_init(paramfile, GP_maxRadius, GP_nQuadratureMax)
+    grid_block%scheme = GP_maxRadius
 
     ! ----------------------------------
     ! set initial conditions
     ! ----------------------------------
     call initialCondition_set(paramfile, grid_block)
 
-    ! call reconstruct_faceValsWithGP(grid_block, 2)
+    call reconstruct_faceValsWithGP(grid_block)
 
     ! ----------------------------------
     ! Advance the solution in time up

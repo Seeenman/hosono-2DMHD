@@ -1,6 +1,6 @@
 module GP
 
-    use definitions, only: ndim, qp, qp_pi, max_string_length, xdir, ydir
+    use definitions, only: ndim, qp, qp_pi, max_string_length, xdir, ydir, north, south, east, west, nfaces
     use readParamFile, only: readParamFile_int, readParamFile_quadPrecisionReal
     use linAlgQuadPrecision, only: linAlgQuadPrecision_solveSPD
 
@@ -29,7 +29,7 @@ module GP
     integer:: GP_nStencMax, GP_nPredMax, GP_nQuadratureMax
     integer, allocatable, dimension(:) :: GP_nStenc, GP_nPred, GP_nQuadrature
     integer, allocatable :: GP_stencIdxs(:,:,:)
-    real, allocatable :: GP_predictionVectors(:,:,:)
+    real, allocatable :: GP_predictionVectors(:,:,:,:)
     real, allocatable, dimension(:,:) :: GP_quadraturePoints, GP_quadratureWeights
 
 contains
@@ -98,8 +98,10 @@ contains
         ! based on GP_maxRadius
         allocate(GP_quadraturePoints(GP_nQuadratureMax, GP_maxRadius))
         allocate(GP_quadratureWeights(GP_nQuadratureMax, GP_maxRadius))
-        allocate(GP_predictionVectors(GP_nStencMax, GP_nPredMax, GP_maxRadius))
+        allocate(GP_predictionVectors(GP_nStencMax, GP_nQuadratureMax, nfaces, GP_maxRadius))
         GP_quadraturePoints = 0.0 !TODO this might let some bugs through silently
+        GP_quadratureWeights = 0.0
+        GP_predictionVectors = 0.0
 
         do rr=1,GP_maxRadius
             nq = GP_nQuadrature(rr)
@@ -150,17 +152,17 @@ contains
 
             ! fill in GP test outputs based on quadrature points
             ! upper face
-            XXstr(xdir, 0*nq+1:1*nq) = quadraturePoints*dl(xdir)
-            XXstr(ydir, 0*nq+1:1*nq) = dl(ydir)/2.0_qp
+            XXstr(xdir, (north-1)*nq+1:north*nq) = quadraturePoints*dl(xdir)
+            XXstr(ydir, (north-1)*nq+1:north*nq) = dl(ydir)/2.0_qp
             ! lower face
-            XXstr(xdir, 1*nq+1:2*nq) = quadraturePoints*dl(xdir)
-            XXstr(ydir, 1*nq+1:2*nq) = -dl(ydir)/2.0_qp
+            XXstr(xdir, (south-1)*nq+1:south*nq) = quadraturePoints*dl(xdir)
+            XXstr(ydir, (south-1)*nq+1:south*nq) = -dl(ydir)/2.0_qp
             ! right face
-            XXstr(xdir, 2*nq+1:3*nq) = dl(xdir)/2.0_qp
-            XXstr(ydir, 2*nq+1:3*nq) = quadraturePoints*dl(ydir)
+            XXstr(xdir, (east-1)*nq+1:east*nq) = dl(xdir)/2.0_qp
+            XXstr(ydir, (east-1)*nq+1:east*nq) = quadraturePoints*dl(ydir)
             ! left face
-            XXstr(xdir, 3*nq+1:4*nq) = -dl(xdir)/2.0_qp
-            XXstr(ydir, 3*nq+1:4*nq) = quadraturePoints*dl(ydir)
+            XXstr(xdir, (west-1)*nq+1:west*nq) = -dl(xdir)/2.0_qp
+            XXstr(ydir, (west-1)*nq+1:west*nq) = quadraturePoints*dl(ydir)
 
             allocate(predVect(ns, np))
             predVect = GP_volAvgToPointPredVect(XX, XXstr, ns, np, dl, ell)
@@ -171,7 +173,18 @@ contains
             end do
 
             ! convert from quad precision to double precision
-            GP_predictionVectors(1:ns, 1:np, rr) = REAL(predVect) 
+            GP_predictionVectors(1:ns, 1:nq, north, rr) = &
+                REAL(predVect(:,(north-1)*nq+1:north*nq))
+
+            GP_predictionVectors(1:ns, 1:nq, south, rr) = &
+                REAL(predVect(:,(south-1)*nq+1:south*nq))
+
+            GP_predictionVectors(1:ns, 1:nq, east, rr) = &
+                REAL(predVect(:,(east-1)*nq+1:east*nq))
+
+            GP_predictionVectors(1:ns, 1:nq, west, rr) = &
+                REAL(predVect(:,(west-1)*nq+1:west*nq))
+
             GP_quadraturePoints(1:nq, rr) = REAL(quadraturePoints)
 
             deallocate(quadraturePoints)
@@ -290,7 +303,7 @@ contains
         !               
         ! Outputs:      - kernel (quadruple precision real) the value of the integrated SE kernel
         !                 evaluated at (p1, p2).
-        ! ------------------------------------------------------------
+        ! -----------------------------------------------------------
 
         implicit none
         
@@ -301,7 +314,7 @@ contains
         real(qp) :: sep
         real(qp) :: kernel
         real(qp) :: sqrt2_ell, half_delta
-        real(qp) :: r1, r2
+       real(qp) :: r1, r2
         integer :: i
         real(qp), parameter :: sqrt_two     = SQRT(2._qp)
         real(qp), parameter :: sqrt_half_pi = SQRT(qp_pi/2._qp)

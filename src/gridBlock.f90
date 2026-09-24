@@ -18,7 +18,7 @@ module gridBlock
     !   rule, the adiabatic index. Those are identical on every rank and
     !   live in the grid and simulation modules.
 
-    use definitions, only: ndim, nConsVars, nPrimVars, xdir, ydir
+    use definitions, only: ndim, nConsVars, nPrimVars, xdir, ydir, nfaces
 
     implicit none
 
@@ -48,9 +48,17 @@ module gridBlock
         ! Pointwise conservative variables reconstructed at face quadrature
         ! points, and the fluxes from the local Riemann problems there.
         ! (variable, direction, quadrature_point, xcoordinate, ycoordinate)
-        real, allocatable :: lowerFace(:,:,:,:,:)
-        real, allocatable :: upperFace(:,:,:,:,:)
+        real, allocatable :: faceVals(:,:,:,:,:)
         real, allocatable :: flux(:,:,:,:,:)
+
+        ! ---- MOOD scheme cascade ----
+        ! which reconstruction scheme to use at each face of each cell
+        ! 3->7th order GP-R3
+        ! 2->5th order GP-R2
+        ! 1->3rd order GP-R1
+        ! 0->1st order Godunov (FOG)
+        ! (faceIdx, i, j)
+        integer, allocatable :: scheme(:,:,:)
 
     end type gridBlock_t
 
@@ -85,24 +93,24 @@ contains
                        blk%minIdx(ydir):blk%maxIdx(ydir)))
 
         ! face reconstructions and fluxes
-        allocate(blk%lowerFace(nConsVars, ndim, nquad, &
-                               blk%minIdx(xdir):blk%maxIdx(xdir), &
-                               blk%minIdx(ydir):blk%maxIdx(ydir)))
-        allocate(blk%upperFace(nConsVars, ndim, nquad, &
-                               blk%minIdx(xdir):blk%maxIdx(xdir), &
-                               blk%minIdx(ydir):blk%maxIdx(ydir)))
+        allocate(blk%faceVals(nConsVars, nquad, nfaces, &
+                              blk%minIdx(xdir):blk%maxIdx(xdir), &
+                              blk%minIdx(ydir):blk%maxIdx(ydir)))
         allocate(blk%flux(nConsVars, ndim, nquad, &
                           blk%minIdx(xdir):blk%maxIdx(xdir), &
                           blk%minIdx(ydir):blk%maxIdx(ydir)))
+        allocate(blk%scheme(nfaces, &
+            blk%minIdx(xdir):blk%maxIdx(xdir), &
+            blk%minIdx(ydir):blk%maxIdx(ydir)))
 
         !!! zero all of these out !!!
         blk%x = 0.0
         blk%y = 0.0
         blk%U = 0.0
         blk%V = 0.0
-        blk%lowerFace = 0.0
-        blk%upperFace = 0.0
+        blk%faceVals = 0.0
         blk%flux = 0.0
+        blk%scheme = 0
 
     end subroutine gridBlock_alloc
 
@@ -120,9 +128,9 @@ contains
         deallocate(blk%y)
         deallocate(blk%U)
         deallocate(blk%V)
-        deallocate(blk%lowerFace)
-        deallocate(blk%upperFace)
+        deallocate(blk%faceVals)
         deallocate(blk%flux)
+        deallocate(blk%scheme)
 
     end subroutine gridBlock_dealloc
 
