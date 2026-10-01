@@ -3,6 +3,7 @@ module getFluxes
     use definitions, only: nConsVars, xdir, ydir, north, south, east, west
     use gridBlock, only: gridBlock_t
     use riemannsolver, only: riemannsolver_getFaceFlux
+    use GP, only: GP_nQuadratureMax
     implicit none
 
     private
@@ -14,7 +15,9 @@ contains
     pure subroutine getFluxes_(blk)
         implicit none
         type(gridBlock_t), intent(in out) :: blk
-        real :: uL(nConsVars), uR(nConsVars)
+        ! Riemann states at every quadrature point on a face
+        ! (variable, quadrature_point)
+        real :: uL(nConsVars, GP_nQuadratureMax), uR(nConsVars, GP_nQuadratureMax)
         integer :: i, j
         integer :: rr
 
