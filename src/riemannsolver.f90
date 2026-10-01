@@ -4,8 +4,9 @@ module riemannsolver
     ! - HLLC for MHD
 
 
-    use definitions, only: ndim, nPrimVars, nConsVars, &
-        velx_var, vely_var, velz_var, magx_var, magy_var, magz_var
+    use definitions, only: nPrimVars, nConsVars, xdir, ydir, &
+        dens_var, momx_var, momy_var, momz_var, ener_var, &
+        velx_var, vely_var, velz_var, pres_var, magx_var, magy_var, magz_var
     use simulation, only: sim_riemannSolver
     use eigen, only: eigen_valsFromPrim
     use convert, only: convert_cons2flux, convert_cons2prim
@@ -49,20 +50,13 @@ contains
         integer, intent(in) :: dir
         real :: flux(nConsVars)
 
+        ! sim_riemannSolver is checked in simulation_init, so the else
+        ! branch should be unreachable. error stop (unlike stop and write)
+        ! is allowed inside of a pure procedure.
         if ((sim_riemannSolver=="hllc") .or. (sim_riemannSolver=="hllcmhd")) then
-            flux = riemannsolver_hllcMHD(uL, uR, dir)
-        else if (sim_riemannSolver=="roe") then
-            write(*,*) "==================================================================="
-            write(*,*) "the roe solver is not implemented yet"
-            write(*,*) "==================================================================="
-            stop
+            flux = riemannsolver_fromConsHllcMHD(uL, uR, dir)
         else
-            write(*,*) "==================================================================="
-            write(*,*) "Unrecognized choice of riemann solver: ", trim(sim_riemannSolver)
-            write(*,*) "Please check that, in your parameter file, the value of"
-            write(*,*) "sim_riemannSolver is set to one of hll, roe, hllc"
-            write(*,*) "==================================================================="
-            stop
+            error stop "riemannsolver_getSingleFlux: unrecognized sim_riemannSolver "//trim(sim_riemannSolver)
         end if
 
     end function riemannsolver_getSingleFlux
@@ -97,8 +91,10 @@ contains
         integer, intent(in) :: dir
         real :: flux(nConsVars)
         ! local variables
-        real :: eigL(NUMB_WAVE), eigR(NUMB_WAVE) ! eiegenvalues at left and right states
-        real :: eigA(NUMB_WAVE) ! eigenvalues from arithmetic mean of left and right states
+        ! eigenvalues of the 7 MHD waves, ordered from the fast left (1)
+        ! to the fast right (7) magnetoacoustic wave. See eigen_valsFromPrim
+        real :: eigL(7), eigR(7) ! eiegenvalues at left and right states
+        real :: eigA(7) ! eigenvalues from arithmetic mean of left and right states
         real :: sL, sR ! fastest signal velocities in left and right direction
         real :: sStr, pStr
         real, dimension(nPrimVars) :: vL, vR
@@ -110,8 +106,9 @@ contains
         real :: magNL, magNR, magT1L, magT1R, magT2L, magT2R
         real :: magNHLL, magT1HLL, magT2HLL
         real :: pL, pR, pTotL, pTotR, rhoL, rhoR, dL, dR
+        real :: momNL, momNR
         integer :: vel_dirN, vel_dirT1, vel_dirT2
-        integer :: mom_dirN!, mom_dirT1, mom_dirT2
+        integer :: mom_dirN, mom_dirT1, mom_dirT2
         integer :: mag_dirN, mag_dirT1, mag_dirT2
 
         ! compute left and right Riemann state in terms of primitive variables
@@ -119,11 +116,11 @@ contains
         vR = convert_cons2prim(uR)
 
         ! set indexing variables based on direction
-        if (dir==XDIR) then
+        if (dir==xdir) then
             vel_dirN  = velx_var; mag_dirN  = magx_var; mom_dirN  = momx_var
             vel_dirT1 = vely_var; mag_dirT1 = magy_var; mom_dirT1 = momy_var
             vel_dirT2 = velz_var; mag_dirT2 = magz_var; mom_dirT2 = momz_var
-        else if (dir==YDIR) then
+        else if (dir==ydir) then
             vel_dirN  = vely_var; mag_dirN  = magy_var; mom_dirN  = momy_var
             vel_dirT1 = velx_var; mag_dirT1 = magx_var; mom_dirT1 = momx_var
             vel_dirT2 = velz_var; mag_dirT2 = magz_var; mom_dirT2 = momz_var
@@ -135,23 +132,23 @@ contains
         eigA = eigen_valsFromPrim((vL+vR)/2, dir)
 
         ! find fastest signal velocities. Equation 4.5a-b in Einfeldt et at. 1991
-        sL = min(eigL(WAVE_FASTLEFT), eigA(WAVE_FASTLEFT)) 
-        sR = max(eigA(WAVE_FASTRGHT), eigR(WAVE_FASTRGHT))
+        sL = min(eigL(1), eigA(1)) 
+        sR = max(eigA(7), eigR(7))
 
         ! compute F(uL), F(uR)
-        fL = convert_cons2flux(vL, dir)
-        fR = convert_cons2flux(vR, dir)
+        fL = convert_cons2flux(uL, dir)
+        fR = convert_cons2flux(uR, dir)
 
         ! compute velocity annd magnetic field HLL states
         uHLL = (sR*uR - sL*uL + fL - fR)/(sR-sL)
-        velHLL = uHLL(MOMX_VAR:MOMZ_VAR)/uHLL(DENS_VAR)
-        magHLL = uHLL(MAGX_VAR:MAGZ_VAR)
+        velHLL = uHLL(momx_var:momz_var)/uHLL(dens_var)
+        magHLL = uHLL(magx_var:magz_var)
 
         ! get dot product of magnetic field and velocity field
         ! in the left, right and, HLL states
         magDotVelHLL = DOT_PRODUCT(magHLL, velHLL)
-        magDotVelL = DOT_PRODUCT(vL(MAGX_VAR:MAGZ_VAR), vL(VELX_VAR:VELZ_VAR))
-        magDotVelR = DOT_PRODUCT(vR(MAGX_VAR:MAGZ_VAR), vR(VELX_VAR:VELZ_VAR))
+        magDotVelL = DOT_PRODUCT(vL(magx_var:magz_var), vL(velx_var:velz_var))
+        magDotVelR = DOT_PRODUCT(vR(magx_var:magz_var), vR(velx_var:velz_var))
 
         ! get normal and tangential components of magnetic field and velocity and momentum
         ! in left, right, and HLL states
@@ -166,12 +163,12 @@ contains
         magT2L = vL(mag_dirT2); magT2R = vR(mag_dirT2); magT2HLL = uHLL(mag_dirT2)
 
         ! get other primitive variables at left and right states
-        rhoL = vL(DENS_VAR); rhoR = vR(DENS_VAR)
-        pL   = vL(PRES_VAR); pR   = vR(PRES_VAR)
+        rhoL = vL(dens_var); rhoR = vR(dens_var)
+        pL   = vL(pres_var); pR   = vR(pres_var)
 
         ! total pressure
-        pTotL = pL + 0.5*DOT_PRODUCT(vL(MAGX_VAR:MAGZ_VAR), vL(MAGX_VAR:MAGZ_VAR))
-        pTotR = pR + 0.5*DOT_PRODUCT(vR(MAGX_VAR:MAGZ_VAR), vR(MAGX_VAR:MAGZ_VAR))
+        pTotL = pL + 0.5*DOT_PRODUCT(vL(magx_var:magz_var), vL(magx_var:magz_var))
+        pTotR = pR + 0.5*DOT_PRODUCT(vR(magx_var:magz_var), vR(magx_var:magz_var))
 
         ! compute S_K - vel_{N,K} for K=L,R
         dL = sL - velNL; dR = sR - velNR
@@ -189,28 +186,28 @@ contains
             flux = fL
         else if ((sL <= 0.0) .and. (0.0 < sStr)) then
             ! approximate solution in left star region
-            uStr(DENS_VAR)  = rhoL*dL/(sL-sStr)
-            uStr(vel_dirN)  = uStr(DENS_VAR)*sStr
-            uStr(vel_dirT1) = uStr(DENS_VAR)*velT1L - (magNHLL*magT1HLL - magNL*magT1L)/(sL-sStr)
-            uStr(vel_dirT2) = uStr(DENS_VAR)*velT2L - (magNHLL*magT2HLL - magNL*magT2L)/(sL-sStr)
+            uStr(dens_var)  = rhoL*dL/(sL-sStr)
+            uStr(mom_dirN)  = uStr(dens_var)*sStr
+            uStr(mom_dirT1) = uStr(dens_var)*velT1L - (magNHLL*magT1HLL - magNL*magT1L)/(sL-sStr)
+            uStr(mom_dirT2) = uStr(dens_var)*velT2L - (magNHLL*magT2HLL - magNL*magT2L)/(sL-sStr)
             uStr(mag_dirN)  = magNHLL
             uStr(mag_dirT1) = magT1HLL
             uStr(mag_dirT2) = magT2HLL
-            uStr(ENER_VAR)  = uL(ENER_VAR)*dL + pStr*sStr - pTotL*velNL - magNHLL*magDotVelHLL + magNL*magDotVelL 
-            uStr(ENER_VAR)  = uStr(ENER_VAR)/(sL-sStr) 
+            uStr(ener_var)  = uL(ener_var)*dL + pStr*sStr - pTotL*velNL - magNHLL*magDotVelHLL + magNL*magDotVelL 
+            uStr(ener_var)  = uStr(ener_var)/(sL-sStr) 
             ! flux
             flux = fL + sL*(uStr - uL)
         else if ((sStr <= 0.0) .and. (0.0 <= sR)) then
             ! approximate solution in left star region
-            uStr(DENS_VAR)  = rhoR*dR/(sR-sStr)
-            uStr(vel_dirN)  = uStr(DENS_VAR)*sStr
-            uStr(vel_dirT1) = uStr(DENS_VAR)*velT1R - (magNHLL*magT1HLL - magNR*magT1R)/(sR-sStr)
-            uStr(vel_dirT2) = uStr(DENS_VAR)*velT2R - (magNHLL*magT2HLL - magNR*magT2R)/(sR-sStr)
+            uStr(dens_var)  = rhoR*dR/(sR-sStr)
+            uStr(mom_dirN)  = uStr(dens_var)*sStr
+            uStr(mom_dirT1) = uStr(dens_var)*velT1R - (magNHLL*magT1HLL - magNR*magT1R)/(sR-sStr)
+            uStr(mom_dirT2) = uStr(dens_var)*velT2R - (magNHLL*magT2HLL - magNR*magT2R)/(sR-sStr)
             uStr(mag_dirN)  = magNHLL
             uStr(mag_dirT1) = magT1HLL
             uStr(mag_dirT2) = magT2HLL
-            uStr(ENER_VAR)  = uR(ENER_VAR)*dR + pStr*sStr - pTotR*velNR - magNHLL*magDotVelHLL + magNR*magDotVelR 
-            uStr(ENER_VAR)  = uStr(ENER_VAR)/(sR-sStr)
+            uStr(ener_var)  = uR(ener_var)*dR + pStr*sStr - pTotR*velNR - magNHLL*magDotVelHLL + magNR*magDotVelR 
+            uStr(ener_var)  = uStr(ener_var)/(sR-sStr)
             ! flux
             flux = fR + sR*(uStr - uR)
         else
