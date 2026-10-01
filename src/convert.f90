@@ -10,7 +10,7 @@ module convert
         magx_var, magy_var, magz_var, velx_var, vely_var, velz_var, pres_var, eint_var, &
         gamm_var, xdir, ydir, nConsVars, nPrimVars
     use eos, only: eos_presIdealGas
-    use simulation, only: sim_gamma, sim_smallEnergy, sim_smallDensity, sim_forceHydro
+    use simulation, only: sim_gamma, sim_forceHydro
 
     implicit none
 
@@ -32,7 +32,6 @@ contains
         real :: V(nPrimVars)
         real :: E, Bp ! energy and magnetic pressure
         real :: Ptot ! total pressure
-        real :: rhoEint ! internal energy
         integer :: mom_dirN, mom_dirT1, mom_dirT2
         integer :: vel_dirN, vel_dirT1, vel_dirT2
         integer :: mag_dirN, mag_dirT1, mag_dirT2
@@ -60,7 +59,7 @@ contains
             mag_dirN  = magx_var
             mag_dirT1 = magy_var
             mag_dirT2 = magz_var
-        else if (dir==ydir) then
+        else
             mom_dirN  = momy_var; vel_dirN  = vely_var
             mom_dirT1 = momx_var; vel_dirT1 = velx_var
             mom_dirT2 = momz_var; vel_dirT2 = velz_var
@@ -128,7 +127,7 @@ contains
             mag_dirN  = magx_var
             mag_dirT1 = magy_var
             mag_dirT2 = magz_var
-        else if (dir==ydir) then
+        else
             vel_dirN  = vely_var
             vel_dirT1 = velx_var
             vel_dirT2 = velz_var
@@ -194,7 +193,7 @@ contains
 
     end function convert_prim2cons
 
-    function convert_cons2prim(U) result(V)
+    pure function convert_cons2prim(U) result(V)
         implicit none
         real, intent(in) :: U(nConsVars)
         real :: V(nPrimVars)
@@ -211,30 +210,10 @@ contains
         
 
         density = U(dens_var)
-        if (density < sim_smallDensity) then
-            print*, "-----------------------------------------------------------------------"
-            print*, "DEBUG"
-            print*, "Negative density in convert_cons2prim"
-            print*, "density value of ", density
-            print*, "density set to", sim_smallDensity
-            print*, "GUBED"
-            print*, "-----------------------------------------------------------------------"
-            density = sim_smallDensity ! preserve positivity in a crude manner
-        end if
         velx = U(momx_var)/density
         vely = U(momy_var)/density
         velz = U(momz_var)/density
         internalEnergy = (U(ener_var) - Bp)/density - 0.5*(velx**2 + vely**2 + velz**2) 
-        if (internalEnergy < sim_smallEnergy) then
-            print*, "-----------------------------------------------------------------------"
-            print*, "DEBUG"
-            print*, "Negative internal energy in convert_cons2prim"
-            print*, "internal energy value of ", internalEnergy
-            print*, "internal energy set to", sim_smallEnergy
-            print*, "GUBED"
-            print*, "-----------------------------------------------------------------------"
-            internalEnergy = sim_smallEnergy ! preserve positivity in a crude manner
-        end if
         pressure = eos_presIdealGas(density, internalEnergy, sim_gamma)
 
         V(dens_var) = density
@@ -248,6 +227,7 @@ contains
         end if
         V(pres_var) = pressure
         V(eint_var) = internalEnergy
+        V(gamm_var) = sim_gamma
 
     end function convert_cons2prim
 
