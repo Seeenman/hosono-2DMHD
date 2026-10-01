@@ -1,7 +1,11 @@
 module gridBlock
 
     ! Defines gridBlock_t: a collection of everything that describes one
-    ! rectangular block of the grid, plus the fluid state living on it.
+    ! rectangular block of the grid, plus the scratch arrays used when
+    ! advancing the fluid state living on it. The fluid state itself (U, V)
+    ! is kept separately in gridState_t (see gridState.f90) so that a
+    ! single block can be paired with several copies of U, e.g. the
+    ! substages of a Runge-Kutta method.
     !
     ! Why this type exists:
     !
@@ -18,7 +22,7 @@ module gridBlock
     !   rule, the adiabatic index. Those are identical on every rank and
     !   live in the grid and simulation modules.
 
-    use definitions, only: ndim, nConsVars, nPrimVars, xdir, ydir, nfaces
+    use definitions, only: ndim, nConsVars, xdir, ydir, nfaces
 
     implicit none
 
@@ -38,11 +42,6 @@ module gridBlock
         real, dimension(ndim) :: domainBeg = 0.0, domainEnd = 0.0 ! bounds of this block
         real, dimension(ndim) :: dl = 0.0                         ! holds dx and dy
         real, allocatable :: x(:), y(:)                           ! cell-center coordinates
-
-        ! ---- fluid state ----
-        ! dimensions correspond to (variable, xcoordinate, ycoordinate)
-        real, allocatable :: U(:,:,:) ! conservative variables
-        real, allocatable :: V(:,:,:) ! primitive variables
 
         ! ---- pointwise face quadrature values of conservative variables ----
         ! Pointwise conservative variables reconstructed at face quadrature points
@@ -88,14 +87,6 @@ contains
         allocate(blk%x(blk%minIdx(xdir):blk%maxIdx(xdir)))
         allocate(blk%y(blk%minIdx(ydir):blk%maxIdx(ydir)))
 
-        ! conservative and primitive variables
-        allocate(blk%U(nConsVars, &
-                       blk%minIdx(xdir):blk%maxIdx(xdir), &
-                       blk%minIdx(ydir):blk%maxIdx(ydir)))
-        allocate(blk%V(nPrimVars, &
-                       blk%minIdx(xdir):blk%maxIdx(xdir), &
-                       blk%minIdx(ydir):blk%maxIdx(ydir)))
-
         ! face reconstructions 
         allocate(blk%faceVals(nConsVars, nquad, nfaces, &
                               blk%minIdx(xdir):blk%maxIdx(xdir), &
@@ -114,8 +105,6 @@ contains
         !!! zero all of these out !!!
         blk%x = 0.0
         blk%y = 0.0
-        blk%U = 0.0
-        blk%V = 0.0
         blk%faceVals = 0.0
         blk%flux = 0.0
         blk%scheme = 0
@@ -134,8 +123,6 @@ contains
 
         deallocate(blk%x)
         deallocate(blk%y)
-        deallocate(blk%U)
-        deallocate(blk%V)
         deallocate(blk%faceVals)
         deallocate(blk%flux)
         deallocate(blk%scheme)
