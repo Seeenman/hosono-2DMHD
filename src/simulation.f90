@@ -52,6 +52,19 @@ contains
         sim_outputAscii = readParamFile_logical(paramfile, 'sim_outputAscii')
         sim_forceHydro = readParamFile_logical(paramfile, 'sim_forceHydro')
 
+        ! check the choice of Riemann solver here, once, so that the
+        ! Riemann solver routines themselves can stay pure
+        select case (trim(sim_riemannSolver))
+        case ('hllc', 'hllcmhd')
+        case default
+            write(*,*) "==================================================================="
+            write(*,*) "Unrecognized choice of riemann solver: ", trim(sim_riemannSolver)
+            write(*,*) "Please check that, in your parameter file, the value of"
+            write(*,*) "sim_riemannSolver is set to one of hllc, hllcmhd"
+            write(*,*) "==================================================================="
+            stop
+        end select
+
         write(*,*) "--------------------------------------------------------------"
         write(*,*) "Simulation initialized"
         write(*,*) "=============================================================="
