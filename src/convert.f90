@@ -6,13 +6,89 @@ module convert
     !   conservative variables -> primitive variables
     ! 
 
-    use definitions
+    use definitions, only: dens_var, momx_var, momy_var, momz_var, ener_var, &
+        magx_var, magy_var, magz_var, velx_var, vely_var, velz_var, pres_var, eint_var, &
+        gamm_var, xdir, ydir, nConsVars, nPrimVars
     use eos, only: eos_presIdealGas
     use simulation, only: sim_gamma, sim_smallEnergy, sim_smallDensity, sim_forceHydro
 
     implicit none
 
+    private
+
+    public :: convert_cons2prim
+    public :: convert_prim2cons
+    public :: convert_prim2flux
+    public :: convert_cons2flux
+
 contains
+
+    pure function convert_cons2flux(U, dir) result(Flux)
+        implicit none
+        real, intent(in) :: U(nConsVars)
+        integer, intent(in) :: dir
+        real :: Flux(nConsVars)
+        ! local variables
+        real :: V(nPrimVars)
+        real :: E, Bp ! energy and magnetic pressure
+        real :: Ptot ! total pressure
+        real :: rhoEint ! internal energy
+        integer :: mom_dirN, mom_dirT1, mom_dirT2
+        integer :: vel_dirN, vel_dirT1, vel_dirT2
+        integer :: mag_dirN, mag_dirT1, mag_dirT2
+
+        ! magnetic pressure (same as magnetic energy density)
+        Bp = 0.0
+        if (.not. sim_forceHydro) then
+            Bp = 0.5*(U(magx_var)**2 + U(magy_var)**2 + U(magz_var)**2)
+        end if
+
+        ! compute energy
+        E = U(ener_var)
+
+        ! compute primitive variables
+        V = convert_cons2prim(U)
+
+        ! compute total pressure
+        Ptot = V(pres_var) + Bp
+
+        ! set indexing variables based on direction
+        if (dir==xdir) then
+            mom_dirN  = momx_var; vel_dirN  = velx_var
+            mom_dirT1 = momy_var; vel_dirT1 = vely_var
+            mom_dirT2 = momz_var; vel_dirT2 = velz_var
+            mag_dirN  = magx_var
+            mag_dirT1 = magy_var
+            mag_dirT2 = magz_var
+        else if (dir==ydir) then
+            mom_dirN  = momy_var; vel_dirN  = vely_var
+            mom_dirT1 = momx_var; vel_dirT1 = velx_var
+            mom_dirT2 = momz_var; vel_dirT2 = velz_var
+            mag_dirN  = magy_var
+            mag_dirT1 = magx_var
+            mag_dirT2 = magz_var
+        end if
+
+        Flux = 0.0
+        Flux(dens_var)  = U(mom_dirN)
+        Flux(mom_dirN)  = U(mom_dirN)**2/U(dens_var) + Ptot
+        Flux(mom_dirT1) = U(mom_dirN)*V(vel_dirT1)
+        Flux(mom_dirT2) = U(mom_dirN)*V(vel_dirT2)
+        Flux(ener_var)  = (E + Ptot)*V(vel_dirN)
+        if (.not. sim_forceHydro) then
+            Flux(mom_dirN)  = Flux(mom_dirN) - V(mag_dirN)**2
+            Flux(mom_dirT1) = Flux(mom_dirT1) - V(mag_dirT1)*V(mag_dirN)
+            Flux(mom_dirT2) = Flux(mom_dirT2) - V(mag_dirT2)*V(mag_dirN)
+            Flux(mag_dirT1) = V(vel_dirN)*V(mag_dirT1) - V(vel_dirT1)*V(mag_dirN)
+            Flux(mag_dirT2) = V(vel_dirN)*V(mag_dirT2) - V(vel_dirT2)*V(mag_dirN)
+            Flux(ener_var)  = Flux(ener_var) &
+                - V(mag_dirN)*(  V(velx_var)*V(magx_var) &
+                               + V(vely_var)*V(magy_var) &
+                               + V(velz_var)*V(magz_var))
+        end if
+                          
+
+    end function convert_cons2flux
 
     pure function convert_prim2flux(V, dir) result(Flux)
         implicit none
