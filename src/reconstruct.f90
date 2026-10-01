@@ -53,6 +53,7 @@ contains
                     end if
 
                     ! get the GP radius that we are reconstructing this face with
+                    ! according to the EDP1 method from the GP-MOOD paper
                     rr = MIN(blk%scheme(f,i,j), blk%scheme(fa,i+ia,j+ja))
 
                     ! get nStenc, and nQuadrature corresponding to the order at which
