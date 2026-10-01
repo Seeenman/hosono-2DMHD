@@ -13,12 +13,15 @@ module forwardEuler
 
 contains
 
-    subroutine forwardEuler_(blk)
+    subroutine forwardEuler_(blk, U)
         ! purpose:   
         !            
         ! 
         ! Inputs:    - blk (gridBlock_t) the block on which to reconstruct
         !              pointwise values at cell faces
+        !            - U (real array) the conservative variables on blk
+        !              to advance, e.g., grid_state%U or the U of an RK
+        !              substage
         !            
         ! Outputs:   
         !            
@@ -27,6 +30,9 @@ contains
         ! ------------------------------------------------------------
         implicit none
         type(gridBlock_t), intent(in out) :: blk
+        real, intent(in) :: U(nConsVars, &
+                              blk%minIdx(xdir):blk%maxIdx(xdir), &
+                              blk%minIdx(ydir):blk%maxIdx(ydir))
         ! local variables
         real :: dx, dy
         real, dimension(nConsVars) :: Fplus, Fminus, Gplus, Gminus
@@ -38,7 +44,7 @@ contains
         ! reconstruct face values at all quadrature points at the correct
         ! order based on blk%scheme. blk%scheme holds the radius of the
         ! GP method to be used for each face of each cell. 
-        call reconstruct_faceValsWithGP(blk)
+        call reconstruct_faceValsWithGP(blk, U)
 
         ! fill in fluxes
         call getFluxes_(blk)

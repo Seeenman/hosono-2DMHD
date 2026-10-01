@@ -13,12 +13,15 @@ module reconstruct
 
 contains
 
-    pure subroutine reconstruct_faceValsWithGP(blk)
+    pure subroutine reconstruct_faceValsWithGP(blk, U)
         ! purpose:   Reconstruct high order pointwise values at cell faces to be
         !            used to compute high order fluxes at cell faces. 
         ! 
         ! Inputs:    - blk (gridBlock_t) the block on which to reconstruct
         !              pointwise values at cell faces
+        !            - U (real array) the conservative variables (cell
+        !              averages) on blk to reconstruct, e.g., grid_state%U
+        !              or the U of an RK substage
         !            
         ! Outputs:   - blk%upperFace (real array) the Riemann state on the upper face
         !              of a cell in each direction (x and y) of each cell
@@ -27,6 +30,9 @@ contains
         ! ------------------------------------------------------------
         implicit none
         type(gridBlock_t), intent(in out) :: blk
+        real, intent(in) :: U(nConsVars, &
+                              blk%minIdx(xdir):blk%maxIdx(xdir), &
+                              blk%minIdx(ydir):blk%maxIdx(ydir))
         ! local variables
         integer :: ns 
         integer :: nq 
@@ -38,8 +44,13 @@ contains
         integer :: ip,jp,k
 
 
-        do j = blk%strtIdx(ydir)-1, blk%stopIdx(ydir)+1
-            do i = blk%strtIdx(xdir)-1, blk%stopIdx(xdir)+1
+        ! reconstruct on the interior plus two rings of guard cells. getFluxes_
+        ! needs face values one cell beyond the interior to get the fluxes on
+        ! the boundary faces of the interior, plus one more cell to get the
+        ! fluxes one face further out (needed for cell centered constrained
+        ! transport). Requires NGC >= GP_maxRadius+2 (see grid.f90).
+        do j = blk%strtIdx(ydir)-2, blk%stopIdx(ydir)+2
+            do i = blk%strtIdx(xdir)-2, blk%stopIdx(xdir)+2
                 do f=1,4 ! loop over all four faces of the cell
 
                     if (f==north) then
@@ -64,7 +75,7 @@ contains
                     do k=1, ns
                         ip = GP_stencIdxs(xdir, k, rr) + i
                         jp = GP_stencIdxs(ydir, k, rr) + j
-                        stencil_data(k,1:nConsVars) = blk%U(1:nConsVars,ip,jp)
+                        stencil_data(k,1:nConsVars) = U(1:nConsVars,ip,jp)
                     end do
 
                     ! Get the pointwise values at face quadrature points
