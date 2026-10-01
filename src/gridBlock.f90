@@ -44,12 +44,16 @@ module gridBlock
         real, allocatable :: U(:,:,:) ! conservative variables
         real, allocatable :: V(:,:,:) ! primitive variables
 
-        ! ---- Riemann problem arrays ----
-        ! Pointwise conservative variables reconstructed at face quadrature
-        ! points, and the fluxes from the local Riemann problems there.
-        ! (variable, direction, quadrature_point, xcoordinate, ycoordinate)
+        ! ---- pointwise face quadrature values of conservative variables ----
+        ! Pointwise conservative variables reconstructed at face quadrature points
+        ! (variable, quadrature_point, NSEW, xcoordinate, ycoordinate)
         real, allocatable :: faceVals(:,:,:,:,:)
-        real, allocatable :: flux(:,:,:,:,:)
+
+        ! ---- face averaged fluxes ----
+        ! face averaged fluxes found by taking weighted sum of the
+        ! fluxes from each riemann problem that was solved at a quadrature point
+        ! (variable, dir, xcoordinate, ycoordinate)
+        real, allocatable :: flux(:,:,:,:)
 
         ! ---- MOOD scheme cascade ----
         ! which reconstruction scheme to use at each face of each cell
@@ -92,13 +96,17 @@ contains
                        blk%minIdx(xdir):blk%maxIdx(xdir), &
                        blk%minIdx(ydir):blk%maxIdx(ydir)))
 
-        ! face reconstructions and fluxes
+        ! face reconstructions 
         allocate(blk%faceVals(nConsVars, nquad, nfaces, &
                               blk%minIdx(xdir):blk%maxIdx(xdir), &
                               blk%minIdx(ydir):blk%maxIdx(ydir)))
-        allocate(blk%flux(nConsVars, ndim, nquad, &
+
+        ! fluxes 
+        allocate(blk%flux(nConsVars, ndim, &
                           blk%minIdx(xdir):blk%maxIdx(xdir), &
                           blk%minIdx(ydir):blk%maxIdx(ydir)))
+
+        ! MOOD scheme/GP radius used at each face of each cell
         allocate(blk%scheme(nfaces, &
             blk%minIdx(xdir):blk%maxIdx(xdir), &
             blk%minIdx(ydir):blk%maxIdx(ydir)))
