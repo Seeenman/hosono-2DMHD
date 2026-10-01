@@ -13,6 +13,7 @@ module output
     use hdf5
     use definitions
     use gridBlock, only: gridBlock_t
+    use gridState, only: gridState_t
     use simulation, only: sim_dataFileBaseName, sim_outputFreqStep, sim_outputFreqTime, &
                           sim_outputHdf5, sim_outputAscii, sim_gamma
 
@@ -24,7 +25,7 @@ module output
 
 contains
 
-    subroutine output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, forceOutput, blk)
+    subroutine output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, forceOutput, blk, state)
         ! purpose:      Decide whether it is time to write an output file,
         !               and write one if so
         !
@@ -36,9 +37,10 @@ contains
         !               - forceOutput (logical) write regardless of the output
         !                 frequency (used for the initial condition, for example)
         !               - blk (gridBlock_t) the block of the grid to write,
-        !                 carrying its own indices, geometry, and fluid state
+        !                 carrying its own indices and geometry
+        !               - state (gridState_t) the fluid state on blk to write
         !
-        ! Note:         blk%V must have up to date guard cells, because the
+        ! Note:         state%V must have up to date guard cells, because the
         !               divergence of B is evaluated with a centered stencil
         !               that reaches one cell outside the interior.
         !
@@ -52,6 +54,7 @@ contains
         integer, intent(inout) :: lastOutputStep, outputCounter
         logical, intent(in) :: forceOutput
         type(gridBlock_t), intent(in) :: blk
+        type(gridState_t), intent(in) :: state
         ! local variables
         character(len=max_string_length) :: outputfile
         character(len=5) :: counterChar
@@ -90,7 +93,7 @@ contains
             if (sim_outputHdf5) then
                 ! file name for hdf5 output
                 outputfile = trim(sim_dataFileBaseName)//'_'//trim(counterChar)//'.h5'
-                call output_writeHdf5(nStep, t, dt, outputCounter, trim(outputfile), blk)
+                call output_writeHdf5(nStep, t, dt, outputCounter, trim(outputfile), blk, state)
             end if
 
             ! write a message to stdout
@@ -110,7 +113,7 @@ contains
 
     end subroutine output_write
 
-    subroutine output_writeHdf5(nStep, t, dt, outputCounter, outputfile, blk)
+    subroutine output_writeHdf5(nStep, t, dt, outputCounter, outputfile, blk, state)
         ! purpose:      Write one hdf5 output file
         !
         ! Inputs:       - outputfile (character) name of the file to write
@@ -123,6 +126,7 @@ contains
         integer, intent(in) :: nStep, outputCounter
         character(len=*), intent(in) :: outputfile
         type(gridBlock_t), intent(in) :: blk
+        type(gridState_t), intent(in) :: state
         ! local variables
         ! Buffers holding the interior of each field, contiguous and
         ! guard-cell free, ready to hand to hdf5. Allocatable rather than
@@ -225,16 +229,16 @@ contains
         ! However, this does not remove the undesired (and presumabley slow)
         ! behavior that the warning is warning us about.
 
-        dens = blk%V(dens_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
-        velx = blk%V(velx_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
-        vely = blk%V(vely_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
-        velz = blk%V(velz_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
-        magx = blk%V(magx_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
-        magy = blk%V(magy_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
-        magz = blk%V(magz_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
-        pres = blk%V(pres_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
-        eint = blk%V(eint_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
-        gama = blk%V(gamm_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        dens = state%V(dens_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        velx = state%V(velx_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        vely = state%V(vely_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        velz = state%V(velz_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        magx = state%V(magx_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        magy = state%V(magy_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        magz = state%V(magz_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        pres = state%V(pres_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        eint = state%V(eint_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        gama = state%V(gamm_var, blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
 
         ! derived quantities
         ener = dens*(velx**2+vely**2+velz**2)/2 + dens*eint ! total energy (hydro)
@@ -249,10 +253,10 @@ contains
             ii = offsets(xdir)
             jj = offsets(ydir)
             divb = divb + 1/(2*blk%dl(i_dim))*&
-                    (blk%V(magx_var+i_dim-1,&
+                    (state%V(magx_var+i_dim-1,&
                            blk%strtIdx(xdir)+ii:blk%stopIdx(xdir)+ii,&
                            blk%strtIdx(ydir)+jj:blk%stopIdx(ydir)+jj)&
-                   - blk%V(magx_var+i_dim-1,&
+                   - state%V(magx_var+i_dim-1,&
                            blk%strtIdx(xdir)-ii:blk%stopIdx(xdir)-ii,&
                            blk%strtIdx(ydir)-jj:blk%stopIdx(ydir)-jj))
         end do

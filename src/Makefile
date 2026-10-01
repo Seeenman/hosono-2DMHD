@@ -56,7 +56,7 @@ else
     $(error MODE must be 'debug' or 'release')
 endif
 
-OBJ := definitions.o readParamFile.o simulation.o gridBlock.o grid.o \
+OBJ := definitions.o readParamFile.o simulation.o gridBlock.o gridState.o grid.o \
        linAlgQuadPrecision.o GP.o reconstruct.o \
        boundaryConditions.o eos.o convert.o initialCondition.o output.o \
        eigen.o cfl.o \
@@ -93,16 +93,16 @@ $(TARGET): $(OBJ)
 readParamFile.o: definitions.o
 simulation.o: definitions.o readParamFile.o
 gridBlock.o: definitions.o
-grid.o: definitions.o readParamFile.o gridBlock.o
+gridState.o: definitions.o gridBlock.o
+grid.o: definitions.o readParamFile.o gridBlock.o gridState.o
 linAlgQuadPrecision.o: definitions.o
 GP.o: definitions.o readParamFile.o linAlgQuadPrecision.o
-boundaryConditions.o: definitions.o readParamFile.o simulation.o
-eos.o: simulation.o
+boundaryConditions.o: definitions.o readParamFile.o simulation.o gridBlock.o
 convert.o: definitions.o eos.o simulation.o
-initialCondition.o: definitions.o readParamFile.o eos.o simulation.o boundaryConditions.o convert.o gridBlock.o
-output.o: definitions.o gridBlock.o simulation.o
+initialCondition.o: definitions.o readParamFile.o eos.o simulation.o boundaryConditions.o convert.o gridBlock.o gridState.o
+output.o: definitions.o gridBlock.o gridState.o simulation.o
 eigen.o: definitions.o simulation.o
-cfl.o: definitions.o simulation.o eigen.o gridBlock.o
+cfl.o: definitions.o simulation.o eigen.o gridBlock.o gridState.o
 reconstruct.o: definitions.o gridBlock.o GP.o
 mhd_driver.o: definitions.o simulation.o GP.o grid.o initialCondition.o output.o cfl.o reconstruct.o
 

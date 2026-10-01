@@ -5,7 +5,7 @@ program mhd_driver
     use definitions, only: max_string_length
     use simulation, only: simulation_init, simulation_finalize, sim_tmax, sim_nstepmax
     use GP, only: GP_init, GP_finalize, GP_nQuadratureMax, GP_maxRadius
-    use grid, only: grid_init, grid_finalize, grid_block
+    use grid, only: grid_init, grid_finalize, grid_block, grid_state
     use initialCondition, only: initialCondition_set
     use output, only: output_write
     use cfl, only: cfl_computedt
@@ -47,7 +47,7 @@ program mhd_driver
 
     ! ----------------------------------------------------
     ! Allocate the global grid variables and arrays
-    ! in grid_block 
+    ! in grid_block and grid_state
     ! ----------------------------------------------------
     call grid_init(paramfile, GP_maxRadius, GP_nQuadratureMax)
     grid_block%scheme = GP_maxRadius
@@ -55,9 +55,9 @@ program mhd_driver
     ! ----------------------------------
     ! set initial conditions
     ! ----------------------------------
-    call initialCondition_set(paramfile, grid_block)
+    call initialCondition_set(paramfile, grid_block, grid_state)
 
-    call reconstruct_faceValsWithGP(grid_block)
+    call reconstruct_faceValsWithGP(grid_block, grid_state%U)
 
     ! ----------------------------------
     ! Advance the solution in time up
@@ -65,19 +65,19 @@ program mhd_driver
     ! ----------------------------------
     nStep = 0
     t = 0.0
-    dt = cfl_computedt(grid_block)
+    dt = cfl_computedt(grid_block, grid_state)
     call validTimeStep(dt, t, sim_tmax)
     lastOutputStep = 0
     lastOutputTime = 0.0
     outputCounter = 0
     
     ! write initial conditions to disk
-    call output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, .true., grid_block)
+    call output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, .true., grid_block, grid_state)
 
     ! the main loop
     ! do while ((t < sim_tmax) .and. (nStep < sim_nstepmax))
     !     ! update dt based on cfl
-    !     dt = cfl_computedt(grid_block)
+    !     dt = cfl_computedt(grid_block, grid_state)
     !     call validTimeStep(dt, t, sim_tmax)
 
     ! end do

@@ -1,11 +1,12 @@
 program test_reconstruct_faceValsWithGP
     ! program:      test_reconstruct_faceValsWithGP
 
-    use definitions, only: max_string_length, north, south, east, west
+    use definitions, only: max_string_length, north, south, east, west, xdir, ydir
     use assert, only: assert_close, assert_summary
     use GP, only: GP_init, GP_finalize, GP_nQuadratureMax, GP_maxRadius, GP_nQuadrature
-    use grid, only: grid_init, grid_finalize, grid_block
+    use grid, only: grid_init, grid_finalize, grid_block, grid_state
     use gridBlock, only: gridBlock_t
+    use gridState, only: gridState_t
     use initialCondition, only: initialCondition_set
     use reconstruct, only: reconstruct_faceValsWithGP
     use simulation, only: simulation_init, simulation_finalize
@@ -24,17 +25,19 @@ program test_reconstruct_faceValsWithGP
     call grid_init(paramfile, GP_maxRadius, GP_nQuadratureMax)
     call simulation_init(paramfile)
 
-    call initialCondition_set(paramfile, grid_block)
+    call initialCondition_set(paramfile, grid_block, grid_state)
 
     ! reconstruct every face of every cell with the same GP radius
     radius = 3
     grid_block%scheme = radius
 
-    call reconstruct_faceValsWithGP(grid_block)
-    i = 10
-    j = 10
+    call reconstruct_faceValsWithGP(grid_block, grid_state%U)
+    ! pick the cell relative to the first interior cell so that the same
+    ! physical cell is printed regardless of the number of guard cells
+    i = grid_block%strtIdx(xdir) + 5
+    j = grid_block%strtIdx(ydir) + 5
     vv = 2
-    call print_faceValGrid(grid_block, vv, i, j, GP_nQuadrature(radius))
+    call print_faceValGrid(grid_block, grid_state, vv, i, j, GP_nQuadrature(radius))
 
     call simulation_finalize()
     call grid_finalize()
@@ -45,20 +48,22 @@ program test_reconstruct_faceValsWithGP
 
 contains
 
-    subroutine print_faceValGrid(blk, vv, ic, jc, nq)
+    subroutine print_faceValGrid(blk, state, vv, ic, jc, nq)
         ! purpose:   Print the cell averages and reconstructed face values of
         !            one conserved variable on the 3x3 block of cells centered
         !            on cell (ic,jc). Each cell's face values are printed just
         !            inside the face they belong to, so the two Riemann states
         !            on a shared face sit on either side of the line.
         !
-        ! Inputs:    - blk (gridBlock_t) block holding U and faceVals
+        ! Inputs:    - blk (gridBlock_t) block holding faceVals
+        !            - state (gridState_t) state on blk holding U
         !            - vv (integer) index of the conserved variable to print
         !            - ic, jc (integer) indices of the center cell
         !            - nq (integer) number of quadrature points per face
         ! ------------------------------------------------------------
         implicit none
         type(gridBlock_t), intent(in) :: blk
+        type(gridState_t), intent(in) :: state
         integer, intent(in) :: vv, ic, jc, nq
         ! local variables
         integer, parameter :: vw = 12              ! width of one ES12.5 value
@@ -123,7 +128,7 @@ contains
                 strt = col0 + 1 + (cw - LEN_TRIM(label))/2
                 lines(m)(strt:strt+LEN_TRIM(label)-1) = TRIM(label)
                 strt = col0 + 1 + (cw - vw)/2
-                write(lines(m+1)(strt:strt+vw-1), vfmt) blk%U(vv, i, j)
+                write(lines(m+1)(strt:strt+vw-1), vfmt) state%U(vv, i, j)
             end do
         end do
 

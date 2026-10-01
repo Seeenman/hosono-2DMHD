@@ -3,14 +3,41 @@ module boundaryConditions
 
     use definitions, only: ndim, xdir, ydir
     use simulation, only: sim_BC
+    use gridBlock, only: gridBlock_t
 
     implicit none
 
     private
 
-    public :: boundaryConditions_apply
+    public :: boundaryConditions_apply, boundaryConditions_applyBlk
 
 contains
+
+    subroutine boundaryConditions_applyBlk(blk, UorV)
+        ! purpose:      Apply boundary conditions to the conservative or
+        !               primitive variables living on a block. Convenience
+        !               wrapper around boundaryConditions_apply that pulls
+        !               the index bookkeeping out of the block and the
+        !               number of variables out of the array itself.
+        ! 
+        ! Inputs:       - blk (gridBlock_t) the block the variables live on
+        !               - UorV (real array) all conservative or primitive
+        !                 variables at every cell of blk, e.g. grid_state%U,
+        !                 grid_state%V, or the U of an RK substage
+        !               
+        ! Outputs:      - UorV (real array) with its guard cells filled
+        ! ------------------------------------------------------------
+        implicit none
+        type(gridBlock_t), intent(in) :: blk
+        ! UorV is only handed on to boundaryConditions_apply (which declares
+        ! its bounds explicitly), so its bounds are not needed here.
+        ! contiguous guarantees no temporary copy is made on that call.
+        real, contiguous, intent(in out) :: UorV(:,:,:)
+
+        call boundaryConditions_apply(UorV, SIZE(UorV, 1), blk%minIdx, blk%maxIdx, &
+                                      blk%strtIdx, blk%stopIdx, blk%NGC)
+
+    end subroutine boundaryConditions_applyBlk
 
     subroutine boundaryConditions_apply(UorV, nVars, minIdx, maxIdx, strtIdx, stopIdx, NGC)
         ! purpose:      Apply boundary conditions to the 

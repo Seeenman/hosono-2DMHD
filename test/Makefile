@@ -26,7 +26,7 @@ FFLAGS := -cpp -Wall -Wextra -Wimplicit-interface -Wuninitialized \
 SRC_DIR := ../src
 
 # src/ modules the tests depend on
-SRC_OBJ := simulation.o grid.o eos.o gridBlock.o definitions.o readParamFile.o linAlgQuadPrecision.o GP.o boundaryConditions.o convert.o initialCondition.o reconstruct.o
+SRC_OBJ := simulation.o grid.o eos.o gridBlock.o gridState.o definitions.o readParamFile.o linAlgQuadPrecision.o GP.o boundaryConditions.o convert.o initialCondition.o reconstruct.o
 
 # local test-support modules
 SUPPORT_OBJ := assert.o
@@ -51,14 +51,14 @@ test: $(TEST_EXES)
 readParamFile.o: definitions.o
 linAlgQuadPrecision.o: definitions.o
 gridBlock.o: definitions.o
+gridState.o: definitions.o gridBlock.o
 GP.o: definitions.o readParamFile.o linAlgQuadPrecision.o
 reconstruct.o: definitions.o gridBlock.o GP.o
-grid.o: definitions.o readParamFile.o gridBlock.o
+grid.o: definitions.o readParamFile.o gridBlock.o gridState.o
 simulation.o: readParamFile.o definitions.o
-eos.o: simulation.o
-boundaryConditions.o: definitions.o simulation.o
+boundaryConditions.o: definitions.o simulation.o gridBlock.o
 convert.o: definitions.o eos.o simulation.o
-initialCondition.o: definitions.o readParamFile.o eos.o simulation.o boundaryConditions.o convert.o gridBlock.o
+initialCondition.o: definitions.o readParamFile.o eos.o simulation.o boundaryConditions.o convert.o gridBlock.o gridState.o
 $(TEST_SRCS:.f90=.o): assert.o $(SRC_OBJ)
 
 %.o: $(SRC_DIR)/%.f90
