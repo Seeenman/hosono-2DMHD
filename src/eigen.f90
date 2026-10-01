@@ -37,7 +37,7 @@ contains
             mag_dirN  = magx_var
             mag_dirT1 = magy_var
             mag_dirT2 = magz_var
-        else if (dir==ydir) then
+        else
             vel_dirN  = vely_var
             vel_dirT1 = velx_var
             vel_dirT2 = velz_var
@@ -278,7 +278,7 @@ contains
 
         if (dir==xdir) then
             dirN  = 0
-        else if (dir==ydir) then
+        else
             dirN  = 1
         end if
         rho   = max(V(dens_var), sim_smallDensity)
@@ -342,7 +342,7 @@ contains
             alpha = alpha/(cf2_minus_cs2)
         else if (pm > 0) then ! alpha_f
             alpha = 1.0
-        else if (pm < 0) then ! alpha_s
+        else ! alpha_s
             alpha = 0.0
         end if
         
