@@ -1,4 +1,4 @@
-module riemannsolver
+module riemannSolver
     ! contains Riemann solver subroutines for MHD
     ! Includes:
     ! - HLLC for MHD
@@ -16,11 +16,11 @@ module riemannsolver
 
     private
 
-    public :: riemannsolver_getFaceFlux
+    public :: riemannSolver_getFaceFlux
 
 contains
 
-    pure function riemannsolver_getFaceFlux(uL, uR, dir, rr) result(flux)
+    pure function riemannSolver_getFaceFlux(uL, uR, dir, rr) result(flux)
         ! get high order face averaged flux from weighted sum
         ! of pointwise fluxes at quadrature points.
         ! if dir==xdir then returns F, if dir==ydir then returns G
@@ -38,12 +38,12 @@ contains
 
         flux = 0.0
         do i=1,nq
-            flux = flux + GP_quadratureWeights(i, rr) * riemannsolver_getSingleFlux(uL(:,i), uR(:,i), dir)
+            flux = flux + GP_quadratureWeights(i, rr) * riemannSolver_getSingleFlux(uL(:,i), uR(:,i), dir)
         end do
 
-    end function riemannsolver_getFaceFlux
+    end function riemannSolver_getFaceFlux
 
-    pure function riemannsolver_getSingleFlux(uL, uR, dir) result(flux)
+    pure function riemannSolver_getSingleFlux(uL, uR, dir) result(flux)
         implicit none
         ! subroutine arguments
         real, intent(in) :: uL(nConsVars), uR(nConsVars)
@@ -54,15 +54,15 @@ contains
         ! branch should be unreachable. error stop (unlike stop and write)
         ! is allowed inside of a pure procedure.
         if ((sim_riemannSolver=="hllc") .or. (sim_riemannSolver=="hllcmhd")) then
-            flux = riemannsolver_fromConsHllcMHD(uL, uR, dir)
+            flux = riemannSolver_fromConsHllcMHD(uL, uR, dir)
         else
-            error stop "riemannsolver_getSingleFlux: unrecognized sim_riemannSolver "//trim(sim_riemannSolver)
+            error stop "riemannSolver_getSingleFlux: unrecognized sim_riemannSolver "//trim(sim_riemannSolver)
         end if
 
-    end function riemannsolver_getSingleFlux
+    end function riemannSolver_getSingleFlux
 
-    pure function riemannsolver_fromConsHllcMHD(uL, uR, dir) result(flux)
-        ! funnction:    riemannsolver_fromConsHllcMHD
+    pure function riemannSolver_fromConsHllcMHD(uL, uR, dir) result(flux)
+        ! funnction:    riemannSolver_fromConsHllcMHD
         ! Author:       Sean Riedel
         ! purpose:      Given left and right Riemann states 
         !               uL and uR (in terms of the conservative variables), 
@@ -214,6 +214,6 @@ contains
             flux = fR
         end if
 
-    end function riemannsolver_fromConsHllcMHD
+    end function riemannSolver_fromConsHllcMHD
 
-end module riemannsolver
+end module riemannSolver
