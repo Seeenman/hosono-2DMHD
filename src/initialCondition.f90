@@ -62,17 +62,13 @@ contains
             stop
         end if
 
-        ! set internal energy and adiabatic index
-        do j=blk%strtIdx(YDIR), blk%stopIdx(YDIR)
-            do i=blk%strtIdx(XDIR), blk%stopIdx(XDIR)
-                state%V(eint_var, i,j) = eos_eintIdealGas(state%V(pres_var,i,j), state%V(dens_var,i,j), sim_gamma)
-                state%V(gamm_var, i,j) = sim_gamma
-            end do
-        end do
-
-        ! also initialize conservative variables
         do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
             do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
+                ! set internal energy and adiabatic index
+                state%V(eint_var, i,j) = eos_eintIdealGas(state%V(pres_var,i,j), state%V(dens_var,i,j), sim_gamma)
+                state%V(gamm_var, i,j) = sim_gamma
+
+                ! also initialize conservative variables
                 state%U(:,i,j) = convert_prim2cons(state%V(:,i,j))
             end do
         end do
