@@ -10,7 +10,7 @@ module riemannSolver
     use simulation, only: sim_riemannSolver
     use eigen, only: eigen_valsFromPrim
     use convert, only: convert_cons2flux, convert_cons2prim
-    use GP, only: GP_quadratureWeights, GP_nQuadratureMax
+    use GP, only: GP_nQuadrature, GP_quadratureWeights, GP_nQuadratureMax
 
     implicit none
 
@@ -20,7 +20,8 @@ module riemannSolver
 
 contains
 
-    pure function riemannSolver_getFaceFlux(uL, uR, dir, rr) result(flux)
+    ! pure function riemannSolver_getFaceFlux(uL, uR, dir, rr) result(flux)
+    function riemannSolver_getFaceFlux(uL, uR, dir, rr) result(flux)
         ! get high order face averaged flux from weighted sum
         ! of pointwise fluxes at quadrature points.
         ! if dir==xdir then returns F, if dir==ydir then returns G
@@ -34,16 +35,20 @@ contains
         integer :: i
         integer :: nq ! number of quadrature points
 
-        nq = rr + 1
-
-        flux = 0.0
-        do i=1,nq
-            flux = flux + GP_quadratureWeights(i, rr) * riemannSolver_getSingleFlux(uL(:,i), uR(:,i), dir)
-        end do
+        if (rr==0) then ! FOG
+            flux=riemannSolver_getSingleFlux(uL(:,1), uR(:,1), dir)
+        else ! high order GP reconstruction
+            nq = GP_nQuadrature(rr)
+            flux = 0.0
+            do i=1,nq
+                flux = flux + GP_quadratureWeights(i, rr) * riemannSolver_getSingleFlux(uL(:,i), uR(:,i), dir)
+            end do
+        end if
 
     end function riemannSolver_getFaceFlux
 
-    pure function riemannSolver_getSingleFlux(uL, uR, dir) result(flux)
+    ! pure function riemannSolver_getSingleFlux(uL, uR, dir) result(flux)
+    function riemannSolver_getSingleFlux(uL, uR, dir) result(flux)
         implicit none
         ! subroutine arguments
         real, intent(in) :: uL(nConsVars), uR(nConsVars)
@@ -61,7 +66,8 @@ contains
 
     end function riemannSolver_getSingleFlux
 
-    pure function riemannSolver_fromConsHllcMHD(uL, uR, dir) result(flux)
+    ! pure function riemannSolver_fromConsHllcMHD(uL, uR, dir) result(flux)
+    function riemannSolver_fromConsHllcMHD(uL, uR, dir) result(flux)
         ! funnction:    riemannSolver_fromConsHllcMHD
         ! Author:       Sean Riedel
         ! purpose:      Given left and right Riemann states 

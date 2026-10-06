@@ -11,7 +11,7 @@ contains
         real, intent(in) :: dens, eint, gama
         real :: pres
 
-        pres = (gama-1)*dens*eint
+        pres = (gama-1)*dens*eint ! basically checking if the internal energy we were given was negative
         if (pres < sim_smallPressure) then
             print*, "-----------------------------------------------------------------------"
             print*, "DEBUG"
@@ -20,7 +20,7 @@ contains
             print*, "pressure set to", sim_smallPressure
             print*, "GUBED"
             print*, "-----------------------------------------------------------------------"
-            pres = sim_smallPressure ! preserve positivity in a crude manner
+            pres = sim_smallPressure ! floor the pressure. 
         end if
 
     end function eos_presIdealGas

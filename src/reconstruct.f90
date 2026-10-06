@@ -67,21 +67,25 @@ contains
                     ! according to the EDP1 method from the GP-MOOD paper
                     rr = MIN(blk%scheme(f,i,j), blk%scheme(fa,i+ia,j+ja))
 
-                    ! get nStenc, and nQuadrature corresponding to the order at which
-                    ! we will be reconstructing at this cell face
-                    ns = GP_nStenc(     rr)
-                    nq = GP_nQuadrature(rr)
-
-                    do k=1, ns
-                        ip = GP_stencIdxs(xdir, k, rr) + i
-                        jp = GP_stencIdxs(ydir, k, rr) + j
-                        stencil_data(k,1:nConsVars) = U(1:nConsVars,ip,jp)
-                    end do
-
-                    ! Get the pointwise values at face quadrature points
-                    blk%faceVals(1:nConsVars, 1:nq, f, i, j) = TRANSPOSE(MATMUL(&
-                        TRANSPOSE(GP_predictionVectors(1:ns, 1:nq, f, rr)),&
-                        stencil_data(1:ns, 1:nConsVars)))
+                    if (rr==0) then ! FOG
+                        blk%faceVals(1:nConsVars, 1, f, i, j) = U(1:nConsVars,i,j)
+                    else ! high order GP reconstruction
+                        ! get nStenc, and nQuadrature corresponding to the order at which
+                        ! we will be reconstructing at this cell face
+                        ns = GP_nStenc(     rr)
+                        nq = GP_nQuadrature(rr)
+                        
+                        do k=1, ns
+                            ip = GP_stencIdxs(xdir, k, rr) + i
+                            jp = GP_stencIdxs(ydir, k, rr) + j
+                            stencil_data(k,1:nConsVars) = U(1:nConsVars,ip,jp)
+                        end do
+                        
+                        ! Get the pointwise values at face quadrature points
+                        blk%faceVals(1:nConsVars, 1:nq, f, i, j) = TRANSPOSE(MATMUL(&
+                            TRANSPOSE(GP_predictionVectors(1:ns, 1:nq, f, rr)),&
+                            stencil_data(1:ns, 1:nConsVars)))
+                    end if
 
                 end do
             end do

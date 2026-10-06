@@ -59,7 +59,7 @@ endif
 OBJ := definitions.o readParamFile.o simulation.o gridBlock.o gridState.o grid.o \
        linAlgQuadPrecision.o GP.o reconstruct.o \
        boundaryConditions.o eos.o convert.o initialCondition.o output.o \
-       eigen.o cfl.o \
+       eigen.o cfl.o getFluxes.o timeStep.o riemannSolver.o \
        mhd_driver.o
 
 .PHONY: all
@@ -104,6 +104,9 @@ output.o: definitions.o gridBlock.o gridState.o simulation.o
 eigen.o: definitions.o simulation.o
 cfl.o: definitions.o simulation.o eigen.o gridBlock.o gridState.o
 reconstruct.o: definitions.o gridBlock.o GP.o
+riemannSolver.o: definitions.o simulation.o eigen.o convert.o GP.o
+getFluxes.o: definitions.o gridBlock.o riemannSolver.o GP.o
+timeStep.o: definitions.o gridBlock.o gridState.o convert.o boundaryConditions.o reconstruct.o getFluxes.o
 mhd_driver.o: definitions.o simulation.o GP.o grid.o initialCondition.o output.o cfl.o reconstruct.o
 
 .PHONY: clean

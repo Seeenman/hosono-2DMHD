@@ -12,7 +12,8 @@ module getFluxes
 
 contains
 
-    pure subroutine getFluxes_(blk)
+    ! pure subroutine getFluxes_(blk)
+    subroutine getFluxes_(blk)
         implicit none
         type(gridBlock_t), intent(in out) :: blk
         ! Riemann states at every quadrature point on a face

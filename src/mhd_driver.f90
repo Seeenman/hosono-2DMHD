@@ -9,7 +9,7 @@ program mhd_driver
     use initialCondition, only: initialCondition_set
     use output, only: output_write
     use cfl, only: cfl_computedt
-    use reconstruct, only: reconstruct_faceValsWithGP
+    use timeStep, only: timeStep_advanceSolution
 
     implicit none
 
@@ -50,14 +50,12 @@ program mhd_driver
     ! in grid_block and grid_state
     ! ----------------------------------------------------
     call grid_init(paramfile, GP_maxRadius, GP_nQuadratureMax)
-    grid_block%scheme = GP_maxRadius
+    ! grid_block%scheme = GP_maxRadius
 
     ! ----------------------------------
     ! set initial conditions
     ! ----------------------------------
     call initialCondition_set(paramfile, grid_block, grid_state)
-
-    call reconstruct_faceValsWithGP(grid_block, grid_state%U)
 
     ! ----------------------------------
     ! Advance the solution in time up
@@ -72,15 +70,36 @@ program mhd_driver
     outputCounter = 0
     
     ! write initial conditions to disk
-    call output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, .true., grid_block, grid_state)
+    call output_write(grid_block, grid_state, nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, forceOutput=.true.)
 
     ! the main loop
-    ! do while ((t < sim_tmax) .and. (nStep < sim_nstepmax))
-    !     ! update dt based on cfl
-    !     dt = cfl_computedt(grid_block, grid_state)
-    !     call validTimeStep(dt, t, sim_tmax)
+    do while ((t < sim_tmax) .and. (nStep < sim_nstepmax))
+        ! update dt based on cfl
+        dt = cfl_computedt(grid_block, grid_state)
+        call validTimeStep(dt, t, sim_tmax)
 
-    ! end do
+        call timeStep_advanceSolution(dt, grid_block, grid_state)
+
+        t = t + dt
+        nStep = nStep + 1
+
+        ! write current step info to stdout
+        write(*, '(1x,i5,f16.8,1x,f16.8)') nStep, t, dt
+
+        ! ----------------------------------
+        ! write output to data file if
+        ! enough time and/or steps have passed
+        ! ----------------------------------
+        call output_write(grid_block, grid_state, nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, forceOutput=.false.)
+
+    end do
+
+    ! ----------------------------------------
+    ! write final output if it wasn't already
+    ! ----------------------------------------
+    if (lastOutputStep<nStep) then
+        call output_write(grid_block, grid_state, nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, forceOutput=.true.)
+    end if
 
     ! ----------------------------------------------------
     ! finalize (deallocate data)

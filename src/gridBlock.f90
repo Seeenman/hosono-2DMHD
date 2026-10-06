@@ -93,6 +93,18 @@ contains
                               blk%minIdx(ydir):blk%maxIdx(ydir)))
 
         ! fluxes 
+        ! note that
+        ! the flux at the (i-1/2,j) interface
+        ! is given by flux(:,xdir,i,j)
+        ! and 
+        ! the flux at the (i+1/2,j) interface
+        ! is given by flux(:,xdir,i+1,j)
+        ! and 
+        ! the flux at the (i,j-1/2) interface
+        ! is given by flux(:,xdir,i,j-1)
+        ! and 
+        ! the flux at the (i,j+1/2) interface
+        ! is given by flux(:,xdir,i,j+1)
         allocate(blk%flux(nConsVars, ndim, &
                           blk%minIdx(xdir):blk%maxIdx(xdir), &
                           blk%minIdx(ydir):blk%maxIdx(ydir)))

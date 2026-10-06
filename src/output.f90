@@ -25,7 +25,7 @@ module output
 
 contains
 
-    subroutine output_write(nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, forceOutput, blk, state)
+    subroutine output_write(blk, state, nStep, t, dt, lastOutputStep, lastOutputTime, outputCounter, forceOutput)
         ! purpose:      Decide whether it is time to write an output file,
         !               and write one if so
         !

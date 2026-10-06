@@ -1,7 +1,10 @@
-module forwardEuler
+module timeStep
 
-    use definitions, only: ndim, xdir, ydir, nConsVars, north, south, east, west
+    use definitions, only: xdir, ydir, nConsVars
     use gridBlock, only: gridBlock_t
+    use gridState, only: gridState_t
+    use convert, only: convert_cons2prim
+    use boundaryConditions, only: boundaryConditions_applyBlk
     use reconstruct, only: reconstruct_faceValsWithGP
     use getFluxes, only: getFluxes_
 
@@ -9,11 +12,32 @@ module forwardEuler
 
     private
 
-    public :: forwardEuler_
+    public timeStep_advanceSolution
 
 contains
 
-    function forwardEuler_(dt, blk, U) result(Unew)
+    subroutine timeStep_advanceSolution(dt, blk, state)
+        implicit none
+        real, intent(in) :: dt
+        type(gridBlock_t), intent(in out) :: blk
+        type(gridState_t), intent(in out) :: state
+        ! local variables
+        integer :: i, j
+
+        state%U = timeStep_forwardEuler(dt, blk, state%U)
+        
+        do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
+            do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
+                state%V(:,i,j) = convert_cons2prim(state%U(:,i,j))
+            end do
+        end do
+
+        call boundaryConditions_applyBlk(blk, state%U)
+        call boundaryConditions_applyBlk(blk, state%V)
+        
+    end subroutine timeStep_advanceSolution
+
+    function timeStep_forwardEuler(dt, blk, U) result(Unew)
         ! purpose:   
         !            
         ! 
@@ -30,7 +54,7 @@ contains
         ! ------------------------------------------------------------
         implicit none
         real, intent(in) :: dt
-        type(gridBlock_t), intent(in) :: blk
+        type(gridBlock_t), intent(in out) :: blk
         real, intent(in) :: U(nConsVars, &
                               blk%minIdx(xdir):blk%maxIdx(xdir), &
                               blk%minIdx(ydir):blk%maxIdx(ydir))
@@ -39,8 +63,7 @@ contains
                      blk%minIdx(ydir):blk%maxIdx(ydir))
         ! local variables
         real :: dx, dy
-        real, dimension(nConsVars) :: Fplus, Fminus, Gplus, Gminus
-        integer i, j, f
+        integer i, j
 
         dx = blk%dl(xdir)
         dy = blk%dl(ydir)
@@ -64,6 +87,6 @@ contains
             end do
         end do
 
-    end function forwardEuler_
+    end function timeStep_forwardEuler
 
-end module forwardEuler
+end module timeStep
