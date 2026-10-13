@@ -41,6 +41,7 @@ module gridBlock
         ! ---- geometry ----
         real, dimension(ndim) :: domainBeg = 0.0, domainEnd = 0.0 ! bounds of this block
         real, dimension(ndim) :: dl = 0.0                         ! holds dx and dy
+        real :: mindxdy = 0.0
         real, allocatable :: x(:), y(:)                           ! cell-center coordinates
 
         ! ---- pointwise face quadrature values of conservative variables ----

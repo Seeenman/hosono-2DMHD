@@ -79,6 +79,7 @@ contains
             ! set dx and dy
             grid_block%dl(i_dim) = (grid_block%domainEnd(i_dim)-grid_block%domainBeg(i_dim))/grid_block%N(i_dim)
         end do
+        grid_block%mindxdy = MINVAL(dl)
 
         !!!! allocate (and zero) the arrays belonging to the block, now
         !!!! that we know Nx, Ny, the guard cell count, and the
