@@ -7,6 +7,7 @@ module timeStep
     use boundaryConditions, only: boundaryConditions_applyBlk
     use reconstruct, only: reconstruct_faceValsWithGP
     use getFluxes, only: getFluxes_
+    use GP, only: GP_maxRadius
 
     implicit none
 
@@ -38,7 +39,7 @@ contains
     end subroutine timeStep_advanceSolution
 
     function timeStep_forwardEuler(dt, blk, U) result(Unew)
-        ! purpose:   
+        ! purpose:   TODO
         !            
         ! 
         ! Inputs:    - blk (gridBlock_t) the block on which to reconstruct
@@ -47,7 +48,7 @@ contains
         !              to advance, e.g., grid_state%U or the U of an RK
         !              substage
         !            
-        ! Outputs:   
+        ! Outputs:   TODO
         !            
         !            
         !            
@@ -88,5 +89,38 @@ contains
         end do
 
     end function timeStep_forwardEuler
+
+    function timeStep_RK3(dt, blk, U) result(Unew)
+        ! purpose:   TODO
+        !            
+        ! 
+        ! Inputs:    - blk (gridBlock_t) the block on which to reconstruct
+        !              pointwise values at cell faces
+        !            - U (real array) the conservative variables on blk
+        !              to advance, e.g., grid_state%U or the U of an RK
+        !              substage
+        !            
+        ! Outputs:   TODO
+        !            
+        !            
+        !            
+        ! ------------------------------------------------------------
+        implicit none
+        real, intent(in) :: dt
+        type(gridBlock_t), intent(in out) :: blk
+        real, intent(in) :: U(nConsVars, &
+                              blk%minIdx(xdir):blk%maxIdx(xdir), &
+                              blk%minIdx(ydir):blk%maxIdx(ydir))
+        real :: Unew(nConsVars, &
+                     blk%minIdx(xdir):blk%maxIdx(xdir), &
+                     blk%minIdx(ydir):blk%maxIdx(ydir))
+        ! local variables
+        integer i, j
+
+        ! start out with full high order reconstruction
+        blk%scheme=GP_maxRadius
+
+
+    end function timeStep_RK3
 
 end module timeStep
