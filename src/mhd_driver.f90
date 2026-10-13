@@ -1,6 +1,6 @@
 program mhd_driver
 
-    use, intrinsic :: ieee_arithmetic, only: IEEE_IS_NAN
+    use, intrinsic :: ieee_arithmetic, only: IEEE_IS_NAN, IEEE_IS_FINITE
 
     use definitions, only: max_string_length
     use simulation, only: simulation_init, simulation_finalize, sim_tmax, sim_nstepmax
@@ -132,6 +132,11 @@ contains
         else if (IEEE_IS_NAN(delta_t)) then
             write(*,*) "=========================================================================="
             write(*,*) "dt is NAN. Aborting simulation."
+            write(*,*) "=========================================================================="
+            stop
+        else if (IEEE_IS_FINITE(delta_t)) then
+            write(*,*) "=========================================================================="
+            write(*,*) "dt is infinite. Aborting simulation."
             write(*,*) "=========================================================================="
             stop
         end if
