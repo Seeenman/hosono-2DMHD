@@ -1,0 +1,5 @@
+#!/bin/bash
+mydir=$(dirname $0)
+progname="$(echo "$0" | awk -F/ '{print $NF}').py"
+progpath="$mydir/../$progname"
+exec "python3" "$progpath" "$@"
