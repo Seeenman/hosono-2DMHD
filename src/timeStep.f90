@@ -71,8 +71,14 @@ contains
         dx = blk%dl(xdir)
         dy = blk%dl(ydir)
 
+        ! start each RK substage with full high order reconstruction
+        ! and compute everything on the first pass of the MOOD loop
+        blk%scheme = GP_maxRadius
+        blk%recompute = .true.
+
         exit_mood_loop = .false.
 
+        ! The MOOD loop
         do while(.not. exit_mood_loop)
 
             ! reconstruct face values at all quadrature points at the correct
@@ -86,8 +92,11 @@ contains
             ! we are on.
             call getFluxes_(blk)
 
+            ! only cells flagged by the MOOD loop have new fluxes. Unew
+            ! keeps the previous pass's values everywhere else
             do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
                 do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
+                    if (.not. blk%recompute(i,j)) CYCLE
                     Unew(:,i,j) = U(:,i,j) &
                         - (dt/dx)*(blk%flux(:,xdir,i+1,j) - blk%flux(:,xdir,i,j)) &
                         - (dt/dy)*(blk%flux(:,ydir,i,j+1) - blk%flux(:,ydir,i,j))
@@ -129,9 +138,6 @@ contains
             blk%minIdx(xdir):blk%maxIdx(xdir), &
             blk%minIdx(ydir):blk%maxIdx(ydir)) :: U1, U2, U3
         integer i, j
-
-        ! start out with full high order reconstruction
-        blk%scheme=GP_maxRadius
 
         U1 = timeStep_forwardEuler(dt, blk, U)
         call boundaryConditions_applyBlk(blk, U1)
