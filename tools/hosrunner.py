@@ -59,7 +59,7 @@ else:
     parent_run_dir = getcwd()+"/"+args.save_to+"/"+args.test_problem+"_"+date.today().strftime("%Y-%m-%d")+"/"
 
 # copy the par file to the run directory 
-repo_root = "~/repos/hosono/"
+repo_root = "~/repos/hosono-2DMHD/"
 default_par_name = args.test_problem + "_default.par"
 default_par_path = Path(repo_root + "par/" + default_par_name).expanduser()
 if default_par_path.exists():

@@ -75,8 +75,12 @@ def plot2dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
     elif contourPlot:
         n_levels = 30
         vmin, vmax = var_data.min(), var_data.max()
-        levels=np.linspace(vmin, vmax, n_levels)
-        color_plot = plt.contour(X,Y, var_data, levels=levels, cmap=orig_map, linewidths=0.6)
+        if vmin == vmax:
+            # contour needs increasing levels, so fall back to pcolormesh for a constant field
+            color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map)
+        else:
+            levels=np.linspace(vmin, vmax, n_levels)
+            color_plot = plt.contour(X,Y, var_data, levels=levels, cmap=orig_map, linewidths=0.6)
         saveName = '_contours_'
     else:
         color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map)
@@ -197,8 +201,12 @@ def plot3dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
     elif contourPlot:
         n_levels = 30
         vmin, vmax = var_data.min(), var_data.max()
-        levels=np.linspace(vmin, vmax, n_levels)
-        color_plot = plt.contour(X,Y, var_data, levels=levels, cmap=orig_map, linewidths=0.6)
+        if vmin == vmax:
+            # contour needs increasing levels, so fall back to pcolormesh for a constant field
+            color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map)
+        else:
+            levels=np.linspace(vmin, vmax, n_levels)
+            color_plot = plt.contour(X,Y, var_data, levels=levels, cmap=orig_map, linewidths=0.6)
         saveName = '_contours_'
     else:
         color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map)
