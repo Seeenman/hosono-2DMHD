@@ -162,7 +162,7 @@ contains
                 ! per RK substage and checked before plateau and DMP. But it
                 ! probably isn't worth the effort since this check
                 ! almost never runs in practice I think
-                ! u2 detection  think
+                ! u2 detection
                 counter = 0
                 do ii=-1,1; do jj = -1, 1
                     if (abs(ii) + abs(jj) <= 1) then
@@ -181,8 +181,18 @@ contains
                 sy1 = (min_dens2ndDerivs(ydir)*max_dens2ndDerivs(ydir) > -blk%mindxdy)
                 sx2 = (MAX(ABS(min_dens2ndDerivs(xdir)), ABS(max_dens2ndDerivs(xdir))) < blk%mindxdy)
                 sy2 = (MAX(ABS(min_dens2ndDerivs(ydir)), ABS(max_dens2ndDerivs(ydir))) < blk%mindxdy) 
-                sx3 = ((ABS(min_dens2ndDerivs(xdir))/ABS(max_dens2ndDerivs(xdir))) > 0.5)
-                sy3 = ((ABS(min_dens2ndDerivs(ydir))/ABS(max_dens2ndDerivs(ydir))) > 0.5)
+
+                ! option 1
+                ! sx3 = ((ABS(min_dens2ndDerivs(xdir))/ABS(max_dens2ndDerivs(xdir))) > 0.5)
+                ! sy3 = ((ABS(min_dens2ndDerivs(ydir))/ABS(max_dens2ndDerivs(ydir))) > 0.5)
+                ! option 2
+                ! sx3 = (ABS(min_dens2ndDerivs(xdir)) > 0.5*ABS(max_dens2ndDerivs(xdir)))
+                ! sy3 = (ABS(min_dens2ndDerivs(ydir)) > 0.5*ABS(max_dens2ndDerivs(ydir)))
+                ! option 3
+                sx3 = (MIN(ABS(min_dens2ndDerivs(xdir)), ABS(max_dens2ndDerivs(xdir))) >= &
+                       0.5*MAX(ABS(min_dens2ndDerivs(xdir)), ABS(max_dens2ndDerivs(xdir))))
+                sy3 = (MIN(ABS(min_dens2ndDerivs(ydir)), ABS(max_dens2ndDerivs(ydir))) >= &
+                       0.5*MAX(ABS(min_dens2ndDerivs(ydir)), ABS(max_dens2ndDerivs(ydir))))
 
                 smooth1 = (sx1 .and. sx2 .and. sy1 .and. sy2)
                 smooth2 = (sx1 .and. sx3 .and. sy1 .and. sy3)
