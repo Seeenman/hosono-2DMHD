@@ -122,7 +122,7 @@ contains
         real, intent(in out) :: delta_t
         real, intent(in) :: current_time, tmax
 
-        if (t+delta_t > tmax) then
+        if (current_time+delta_t > tmax) then
             delta_t = tmax - current_time
         else if (delta_t < 0.0) then
             write(*,*) "=========================================================================="
