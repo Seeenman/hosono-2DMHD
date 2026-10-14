@@ -155,6 +155,9 @@ contains
         ! cylindricaly geometry
         nn = 2
 
+        V_ins = 0.0
+        V_ins = 0.0
+
         ! primitive variables inside of circle
         V_ins(dens_var) = 1.0
         V_ins(velx_var) = 0.0
