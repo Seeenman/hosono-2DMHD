@@ -137,7 +137,6 @@ contains
         real, dimension(nConsVars, &
             blk%minIdx(xdir):blk%maxIdx(xdir), &
             blk%minIdx(ydir):blk%maxIdx(ydir)) :: U1, U2, U3
-        integer i, j
 
         U1 = timeStep_forwardEuler(dt, blk, U)
         call boundaryConditions_applyBlk(blk, U1)

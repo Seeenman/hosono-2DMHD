@@ -47,7 +47,7 @@ contains
         real :: sigma_v, sigma_M, sigma_p
         real, dimension(nPrimVars) :: V, Vi_plus, Vi_minus, Vj_plus, Vj_minus
         integer :: i, j
-        integer :: ii, jj, counter, dir
+        integer :: ii, jj, counter
         logical :: admissible, shock1, shock2, shock3
         logical :: sx1, sx2, sx3, sy1, sy2, sy3, smooth1, smooth2
         logical, allocatable :: checkCell(:,:) ! local copy of the state that blk%recompute was in when passed into this routine
