@@ -334,7 +334,7 @@ contains
 
     end function GP_volAvgToPointSqExpKernel
 
-    function GP_volAvgToPointPredVect(XX, XXstr, nStenc, nPred, dl, ell) result(predVect)
+    pure function GP_volAvgToPointPredVect(XX, XXstr, nStenc, nPred, dl, ell) result(predVect)
         ! function:     GP_volAvgToPointPredVect
         ! purpose:      Construct the Gaussian process prediction vector(s) for predicting 
         !               pointwise data given volume averaged data.
