@@ -103,7 +103,7 @@ initialCondition.o: definitions.o readParamFile.o eos.o simulation.o boundaryCon
 output.o: definitions.o gridBlock.o gridState.o simulation.o
 eigen.o: definitions.o simulation.o
 cfl.o: definitions.o simulation.o eigen.o gridBlock.o gridState.o
-reconstruct.o: definitions.o gridBlock.o GP.o
+reconstruct.o: definitions.o gridBlock.o GP.o convert.o detect.o
 riemannSolver.o: definitions.o simulation.o eigen.o convert.o GP.o
 getFluxes.o: definitions.o gridBlock.o riemannSolver.o GP.o
 detect.o: definitions.o gridBlock.o convert.o

@@ -25,19 +25,28 @@ contains
 
         do j = blk%strtIdx(ydir)-1, blk%stopIdx(ydir)+2
             do i = blk%strtIdx(xdir)-1, blk%stopIdx(xdir)+2
-                ! |             |             |            |
-                ! |     i-1   uL|uR    i      |     i+1    |
-                ! |             |             |            |
-                ! right riemann state at i-1/2 interface
-                uR = blk%faceVals(:, :, west, i, j)
-                ! left riemann state at i-1/2 interface
-                uL = blk%faceVals(:, :, east, i-1, j)
+                ! only recompute fluxes at faces of cells flagged by the
+                ! MOOD loop. The face values on both sides of an unflagged
+                ! face are unchanged so its flux is too.
+                ! As this is currently writtin it can recompute
+                ! fluxes that don't need to be recomputed but
+                ! this should only be a marginal slow down
+                ! since so few cells are flagged for recompute
+                if (blk%recompute(i,j) .or. blk%recompute(i-1,j)) then
+                    ! |             |             |            |
+                    ! |     i-1   uL|uR    i      |     i+1    |
+                    ! |             |             |            |
+                    ! right riemann state at i-1/2 interface
+                    uR = blk%faceVals(:, :, west, i, j)
+                    ! left riemann state at i-1/2 interface
+                    uL = blk%faceVals(:, :, east, i-1, j)
 
-                ! the GP radius used for this face
-                rr = MIN(blk%scheme(west,i,j), blk%scheme(east,i-1,j))
+                    ! the GP radius used for this face
+                    rr = MIN(blk%scheme(west,i,j), blk%scheme(east,i-1,j))
 
-                ! the flux at the i-1/2 interface
-                blk%flux(:, xdir, i, j) = riemannsolver_getFaceFlux(uL, uR, xdir, rr)
+                    ! the flux at the i-1/2 interface
+                    blk%flux(:, xdir, i, j) = riemannsolver_getFaceFlux(uL, uR, xdir, rr)
+                end if
 
 
                 ! ----------------
@@ -59,16 +68,18 @@ contains
                 ! 
                 ! 
                 ! ----------------
-                ! right riemann state at j-1/2 interface
-                uR = blk%faceVals(:, :, south, i, j)
-                ! left riemann state at i-1/2 interface
-                uL = blk%faceVals(:, :, north, i, j-1)
+                if (blk%recompute(i,j) .or. blk%recompute(i,j-1)) then
+                    ! right riemann state at j-1/2 interface
+                    uR = blk%faceVals(:, :, south, i, j)
+                    ! left riemann state at i-1/2 interface
+                    uL = blk%faceVals(:, :, north, i, j-1)
 
-                ! the GP radius used for this face
-                rr = MIN(blk%scheme(south,i,j), blk%scheme(north,i,j-1))
+                    ! the GP radius used for this face
+                    rr = MIN(blk%scheme(south,i,j), blk%scheme(north,i,j-1))
 
-                ! the flux at the j-1/2 interface
-                blk%flux(:, ydir, i, j) = riemannsolver_getFaceFlux(uL, uR, ydir, rr)
+                    ! the flux at the j-1/2 interface
+                    blk%flux(:, ydir, i, j) = riemannsolver_getFaceFlux(uL, uR, ydir, rr)
+                end if
             end do
         end do
 

@@ -28,7 +28,7 @@ module gridBlock
 
     private
 
-    public :: gridBlock_t, gridBlock_alloc, gridBlock_dealloc
+    public :: gridBlock_t, gridBlock_alloc, gridBlock_dealloc, gridBlock_lowerOrder
 
     type :: gridBlock_t
 
@@ -64,6 +64,13 @@ module gridBlock
         ! 0->1st order Godunov (FOG)
         ! (faceIdx, i, j)
         integer, allocatable :: scheme(:,:,:)
+
+        ! whether a cell's face values, fluxes, and RK substage update need to be
+        ! recomputed on the next iteration of the MOOD loop inside Forward Euler.
+        ! Set for a cell whose order was lowered and its four neighbors since they share
+        ! faces with it
+        ! (i, j)
+        logical, allocatable :: recompute(:,:)
 
     end type gridBlock_t
 
@@ -116,12 +123,18 @@ contains
             blk%minIdx(xdir):blk%maxIdx(xdir), &
             blk%minIdx(ydir):blk%maxIdx(ydir)))
 
+        ! MOOD recompute flags for each cell
+        allocate(blk%recompute( &
+            blk%minIdx(xdir):blk%maxIdx(xdir), &
+            blk%minIdx(ydir):blk%maxIdx(ydir)))
+
         !!! zero all of these out !!!
         blk%x = 0.0
         blk%y = 0.0
         blk%faceVals = 0.0
         blk%flux = 0.0
         blk%scheme = 0
+        blk%recompute = .false.
 
     end subroutine gridBlock_alloc
 
@@ -140,7 +153,36 @@ contains
         deallocate(blk%faceVals)
         deallocate(blk%flux)
         deallocate(blk%scheme)
+        deallocate(blk%recompute)
 
     end subroutine gridBlock_dealloc
+
+    pure subroutine gridBlock_lowerOrder(blk, i, j)
+        ! purpose:      Lower the order of the reconstruction used in cell
+        !               (i,j) by one, down to first order, and flag the
+        !               cell and its four neighbors to be recomputed in
+        !               the MOOD loop. The neighbors are flagged since the
+        !               faces they share with (i,j) are reconstructed at
+        !               the lower order of the two cells (EDP1)
+        !
+        ! Inputs:       - blk (gridBlock_t) the block containing the cell
+        !               - i, j (integer) the indices of the cell
+        !
+        ! Outputs:      - blk (gridBlock_t) with blk%scheme and
+        !                 blk%recompute updated
+        ! ------------------------------------------------------------
+        implicit none
+        type(gridBlock_t), intent(in out) :: blk
+        integer, intent(in) :: i, j
+
+        blk%scheme(:,i,j) = MAX(blk%scheme(:,i,j) - 1, 0)
+
+        blk%recompute(i,   j  ) = .true.
+        blk%recompute(i+1, j  ) = .true.
+        blk%recompute(i-1, j  ) = .true.
+        blk%recompute(i,   j+1) = .true.
+        blk%recompute(i,   j-1) = .true.
+
+    end subroutine gridBlock_lowerOrder
 
 end module gridBlock

@@ -1,10 +1,11 @@
 module reconstruct
 
-    use definitions, only: ndim, xdir, ydir, nConsVars, north, south, east, west
-    use gridBlock, only: gridBlock_t
+    use definitions, only: ndim, xdir, ydir, nConsVars, dens_var, north, south, east, west
+    use gridBlock, only: gridBlock_t, gridBlock_lowerOrder
     use GP, only: GP_stencIdxs, GP_nStenc, GP_nPred, GP_predictionVectors, &
         GP_nQuadrature, GP_maxRadius, GP_nPredMax, GP_nQuadratureMax, GP_nStencMax
-    ! use detect, only: detect_CAD
+    use detect, only: detect_CAD, detect_PAD
+    use convert, only: convert_cons2pres
 
     implicit none
 
@@ -43,6 +44,10 @@ contains
         integer :: f ! face index (1=north, 2=south, 3=east, 4=west)
         integer :: fa, ia, ja ! adjacent face index and coordinates
         integer :: ip,jp,k
+        integer :: q
+        real :: pres
+        logical :: cellIsAdmissible, faceValsAreAdmissible
+        logical, allocatable :: reconstructCell(:,:), reconstructNextPass(:,:)
 
 
         ! reconstruct on the interior plus two rings of guard cells. getFluxes_
@@ -50,49 +55,100 @@ contains
         ! the boundary faces of the interior, plus one more cell to get the
         ! fluxes one face further out (needed for cell centered constrained
         ! transport). Requires NGC >= GP_maxRadius+2 (see grid.f90).
-        do j = blk%strtIdx(ydir)-2, blk%stopIdx(ydir)+2
-            do i = blk%strtIdx(xdir)-2, blk%stopIdx(xdir)+2
-                do f=1,4 ! loop over all four faces of the cell
+        ! only reconstruct cells flagged by the MOOD loop. Their neighbors'
+        ! faces are unchanged
+        allocate(reconstructCell(blk%minIdx(xdir):blk%maxIdx(xdir), &
+                                 blk%minIdx(ydir):blk%maxIdx(ydir)))
+        allocate(reconstructNextPass(blk%minIdx(xdir):blk%maxIdx(xdir), &
+                                     blk%minIdx(ydir):blk%maxIdx(ydir)))
+        reconstructCell = blk%recompute
 
-                    if (f==north) then
-                        fa = south; ia=0; ja=1
-                    else if (f==south) then
-                        fa = north; ia=0; ja=-1
-                    else if (f==east) then
-                        fa = west; ia=1; ja=0
-                    else if (f==west) then
-                        fa = east; ia=-1; ja=0
-                    end if
+        ! reconstruct until all Riemann states are admissible. First order
+        ! face values are the cell averages, so this always terminates
+        faceValsAreAdmissible = .false.
 
-                    ! get the GP radius that we are reconstructing this face with
-                    ! according to the EDP1 method from the GP-MOOD paper
-                    rr = MIN(blk%scheme(f,i,j), blk%scheme(fa,i+ia,j+ja))
+        do while (.not. faceValsAreAdmissible)
 
-                    if (rr==0) then ! FOG
-                        blk%faceVals(1:nConsVars, 1, f, i, j) = U(1:nConsVars,i,j)
-                    else ! high order GP reconstruction
-                        ! get nStenc, and nQuadrature corresponding to the order at which
-                        ! we will be reconstructing at this cell face
-                        ns = GP_nStenc(     rr)
-                        nq = GP_nQuadrature(rr)
+            faceValsAreAdmissible = .true.
+            reconstructNextPass = .false.
+
+            do j = blk%strtIdx(ydir)-2, blk%stopIdx(ydir)+2
+                do i = blk%strtIdx(xdir)-2, blk%stopIdx(xdir)+2
+                    if (.not. reconstructCell(i,j)) CYCLE
+
+                    cellIsAdmissible = .true.
+
+                    do f=1,4 ! loop over all four faces of the cell
+
+                        if (f==north) then
+                            fa = south; ia=0; ja=1
+                        else if (f==south) then
+                            fa = north; ia=0; ja=-1
+                        else if (f==east) then
+                            fa = west; ia=1; ja=0
+                        else if (f==west) then
+                            fa = east; ia=-1; ja=0
+                        end if
+
+                        ! get the GP radius that we are reconstructing this face with
+                        ! according to the EDP1 method from the GP-MOOD paper
+                        rr = MIN(blk%scheme(f,i,j), blk%scheme(fa,i+ia,j+ja))
+
+                        if (rr==0) then ! FOG
+                            blk%faceVals(1:nConsVars, 1, f, i, j) = U(1:nConsVars,i,j)
+                        else ! high order GP reconstruction
+                            ! get nStenc, and nQuadrature corresponding to the order at which
+                            ! we will be reconstructing at this cell face
+                            ns = GP_nStenc(     rr)
+                            nq = GP_nQuadrature(rr)
                         
-                        do k=1, ns
-                            ip = GP_stencIdxs(xdir, k, rr) + i
-                            jp = GP_stencIdxs(ydir, k, rr) + j
-                            stencil_data(k,1:nConsVars) = U(1:nConsVars,ip,jp)
-                        end do
+                            do k=1, ns
+                                ip = GP_stencIdxs(xdir, k, rr) + i
+                                jp = GP_stencIdxs(ydir, k, rr) + j
+                                stencil_data(k,1:nConsVars) = U(1:nConsVars,ip,jp)
+                            end do
                         
-                        ! Get the pointwise values at face quadrature points
-                        blk%faceVals(1:nConsVars, 1:nq, f, i, j) = TRANSPOSE(MATMUL(&
-                            TRANSPOSE(GP_predictionVectors(1:ns, 1:nq, f, rr)),&
-                            stencil_data(1:ns, 1:nConsVars)))
+                            ! Get the pointwise values at face quadrature points
+                            blk%faceVals(1:nConsVars, 1:nq, f, i, j) = TRANSPOSE(MATMUL(&
+                                TRANSPOSE(GP_predictionVectors(1:ns, 1:nq, f, rr)),&
+                                stencil_data(1:ns, 1:nConsVars)))
 
-                        ! TODO run CAD check on riemann states to preserve symmetry
+                            ! CAD and PAD check on the Riemann states
+                            do q=1, nq
+                                pres = convert_cons2pres(blk%faceVals(1:nConsVars, q, f, i, j))
+                                if (.not. (detect_CAD(blk%faceVals(dens_var, q, f, i, j), pres) .and. &
+                                           detect_PAD(blk%faceVals(dens_var, q, f, i, j), pres))) then
+                                    cellIsAdmissible = .false.
+                                end if
+                            end do
 
+                        end if
+
+                    end do
+
+                    ! lower the order of a cell with inadmissible Riemann states.
+                    ! Since faces use the lower order of the two cells sharing
+                    ! them (EDP1 from GP-MOOD paper), the neighbors' faces are lowered
+                    ! as well so both Riemann states at every face stay at the same order.
+                    ! gridBlock_lowerOrder lowers the order of the reconstruction at
+                    ! all four faces of cell (i,j). gridBlock_lowerOrder also sets
+                    ! blk%recompute to .true. for cell (i,j) (which is the cell with
+                    ! inadmissible Riemann states in this case) as well as its 4 directly
+                    ! adjacent neighbors. 
+                    ! This is done so that their fluxes and cell average updates are
+                    ! recomputed and they are checked by the MOOD loop.
+                    if (.not. cellIsAdmissible) then
+                        call gridBlock_lowerOrder(blk, i, j)
+                        reconstructNextPass(i-1:i+1, j) = .true.
+                        reconstructNextPass(i, j-1:j+1) = .true.
+                        faceValsAreAdmissible = .false.
                     end if
 
                 end do
             end do
+
+            reconstructCell = reconstructNextPass
+
         end do
 
     end subroutine reconstruct_faceValsWithGP

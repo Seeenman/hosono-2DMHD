@@ -4,14 +4,14 @@ module detect
 
     use definitions, only: nConsVars, nPrimVars, dens_var, pres_var, velx_var, vely_var, pres_var, gamm_var, &
         xdir, ydir, ndim
-    use gridBlock, only: gridBlock_t
-    use convert, only: convert_cons2prim
+    use gridBlock, only: gridBlock_t, gridBlock_lowerOrder
+    use convert, only: convert_cons2prim, convert_cons2pres
 
     implicit none
 
     private
     public :: detect_ALL
-    ! public :: detect_CAD
+    public :: detect_CAD, detect_PAD
 
 contains
 
@@ -41,6 +41,7 @@ contains
         ! local variables
         real :: dx, dy
         real :: div_vel, mach, pres_gradient
+        real :: presNew
         real :: densNew, dens1, dens2, dens3, dens4, dens5, min_dens, max_dens
         real :: dens2ndDerivs(5,2), min_dens2ndDerivs(2), max_dens2ndDerivs(2)
         real :: sigma_v, sigma_M, sigma_p
@@ -49,8 +50,17 @@ contains
         integer :: ii, jj, counter, dir
         logical :: admissible, shock1, shock2, shock3
         logical :: sx1, sx2, sx3, sy1, sy2, sy3, smooth1, smooth2
+        logical, allocatable :: checkCell(:,:) ! local copy of the state that blk%recompute was in when passed into this routine
 
         exit_mood_loop = .true.
+
+        ! only cells that were recomputed on this pass of the MOOD loop
+        ! need to be checked, every other cell passed on an earlier pass.
+        ! blk%recompute is then rebuilt from just the cells that fail
+        allocate(checkCell(blk%minIdx(xdir):blk%maxIdx(xdir), &
+                           blk%minIdx(ydir):blk%maxIdx(ydir)))
+        checkCell = blk%recompute
+        blk%recompute = .false.
 
         dx = blk%dl(xdir)
         dy = blk%dl(ydir)
@@ -58,20 +68,30 @@ contains
         do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
             do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
 
+                if (.not. checkCell(i,j)) CYCLE ! go to next index
+
+                ! the first order scheme is the last one in the cascade
+                ! so it is always accepted
+                if (ALL(blk%scheme(:,i,j) <= 0)) CYCLE ! go to next index
+
+                ! pressure is computed directly from Unew rather than with
+                ! convert_cons2prim because the eos floors negative pressures
+                presNew = convert_cons2pres(Unew(:,i,j))
+
                 ! -------------------------
                 ! check for NANs and INFs
                 ! -------------------------
-                admissible = detect_CAD(Unew(dens_var,i,j), Unew(pres_var, i, j))
+                admissible = detect_CAD(Unew(dens_var,i,j), presNew)
                 if (.not. admissible) then
-                    blk%scheme(:,i,j) = blk%scheme(:,i,j) - 1
+                    call gridBlock_lowerOrder(blk, i, j) ! this lowers blk%scheme(:,i,j) by one and sets blk%recompute(k,l) to .true. for (k,l) = (i,j), (i+1,j), (i-1,j), (i,j+1), (i,j-1)
                     exit_mood_loop = .false.
                     CYCLE ! go to next index
                 end if
 
                 ! Check for positivity
-                admissible = detect_PAD(Unew(dens_var,i,j), Unew(pres_var, i, j))
+                admissible = detect_PAD(Unew(dens_var,i,j), presNew)
                 if (.not. admissible) then
-                    blk%scheme(:,i,j) = blk%scheme(:,i,j) - 1
+                    call gridBlock_lowerOrder(blk, i, j)
                     exit_mood_loop = .false.
                     CYCLE ! go to next index
                 end if
@@ -168,7 +188,7 @@ contains
                 smooth2 = (sx1 .and. sx3 .and. sy1 .and. sy3)
 
                 if (.not. (smooth1 .or. smooth2)) then
-                    blk%scheme(:,i,j) = blk%scheme(:,i,j) - 1
+                    call gridBlock_lowerOrder(blk, i, j)
                     exit_mood_loop = .false.
                 end if
                 
@@ -177,7 +197,7 @@ contains
         
     end subroutine detect_ALL
 
-    function detect_PAD(dens, pres) result(admissible)
+    pure function detect_PAD(dens, pres) result(admissible)
         ! physical admisibility condition
         implicit none
         real, intent(in) :: dens, pres
@@ -189,7 +209,7 @@ contains
             
     end function detect_PAD
 
-    function detect_CAD(dens, pres) result(admissible)
+    pure function detect_CAD(dens, pres) result(admissible)
         ! Computer science admissibility detection
         implicit none
         real, intent(in) :: dens, pres
