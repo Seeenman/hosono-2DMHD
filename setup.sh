@@ -20,6 +20,7 @@ files=("cfl.f90" \
 	"riemannSolver.f90"      \
 	"simulation.f90"         \
 	"timeStep.f90"           \
+	"detect.f90"             \
 	"Makefile"               \
 )
 

@@ -134,7 +134,7 @@ contains
             write(*,*) "dt is NAN. Aborting simulation."
             write(*,*) "=========================================================================="
             stop
-        else if (IEEE_IS_FINITE(delta_t)) then
+        else if (.not. IEEE_IS_FINITE(delta_t)) then
             write(*,*) "=========================================================================="
             write(*,*) "dt is infinite. Aborting simulation."
             write(*,*) "=========================================================================="

@@ -4,6 +4,7 @@ module reconstruct
     use gridBlock, only: gridBlock_t
     use GP, only: GP_stencIdxs, GP_nStenc, GP_nPred, GP_predictionVectors, &
         GP_nQuadrature, GP_maxRadius, GP_nPredMax, GP_nQuadratureMax, GP_nStencMax
+    ! use detect, only: detect_CAD
 
     implicit none
 
@@ -85,6 +86,9 @@ contains
                         blk%faceVals(1:nConsVars, 1:nq, f, i, j) = TRANSPOSE(MATMUL(&
                             TRANSPOSE(GP_predictionVectors(1:ns, 1:nq, f, rr)),&
                             stencil_data(1:ns, 1:nConsVars)))
+
+                        ! TODO run CAD check on riemann states to preserve symmetry
+
                     end if
 
                 end do
