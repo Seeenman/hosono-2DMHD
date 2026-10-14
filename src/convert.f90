@@ -4,6 +4,7 @@ module convert
     !   primitive variables -> flux
     !   primitive variables -> conservative variables
     !   conservative variables -> primitive variables
+    !   conservative variables -> pressure
     ! 
 
     use definitions, only: dens_var, momx_var, momy_var, momz_var, ener_var, &
@@ -20,6 +21,7 @@ module convert
     public :: convert_prim2cons
     public :: convert_prim2flux
     public :: convert_cons2flux
+    public :: convert_cons2pres
 
 contains
 
@@ -234,5 +236,25 @@ contains
         V(gamm_var) = sim_gamma
 
     end function convert_cons2prim
+
+    pure function convert_cons2pres(U) result(pres)
+        ! pressure computed from the conservative variables of a single
+        ! cell. Unlike convert_cons2prim this does not floor the pressure
+        ! so that negative pressures can be detected
+        implicit none
+        real, intent(in) :: U(nConsVars)
+        real :: pres
+        ! local variables
+        real :: Bp ! magnetic pressure (magnetic energy density)
+
+        if (sim_forceHydro) then
+            Bp = 0.0
+        else
+            Bp = 0.5*SUM(U(magx_var:magz_var)**2)
+        end if
+
+        pres = (sim_gamma-1.0)*(U(ener_var) - Bp - 0.5*SUM(U(momx_var:momz_var)**2)/U(dens_var))
+
+    end function convert_cons2pres
 
 end module convert
