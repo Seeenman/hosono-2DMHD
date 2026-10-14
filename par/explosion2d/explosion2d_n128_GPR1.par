@@ -1,0 +1,69 @@
+## =============================
+## name the simulation and data files
+## =============================
+sim_dataFileBaseName = 'data/explosion2d_n128_GPR1'
+
+## =============================
+## simulation parameters
+## =============================
+sim_gamma = 1.4
+sim_smallPressure = 1.0e-12
+sim_smallEnergy = 1.0e-12
+sim_smallDensity = 1.0e-12
+sim_smallB = 1.0e-12
+sim_riemannSolver = 'hllc'
+sim_cfl = 0.5
+sim_tmax = 1.0
+sim_nstepmax = 1000000
+sim_forceHydro = .true.
+
+## =============================
+## input/output parameters
+## =============================
+sim_outputFreqTime = 0.025 # positive real number. Negative or zero if not used
+sim_outputFreqStep = 0 # positive integer. Negative or zero if not used
+sim_outputHdf5 = .true. 
+sim_outputAscii = .false.
+
+## =============================
+## grid parameters
+## =============================
+grid_Nx = 128 # number of cells
+grid_Ny = 128 # number of cells
+grid_xBeg = -1.0
+grid_xEnd =  1.0
+grid_yBeg =  0.0
+grid_yEnd =  2.0
+
+## =============================
+## GP (Guassian process) parameters
+## =============================
+GP_maxRadius = 1
+GP_ellOverDelta = 6.0 # ell/min(dx,dy)
+
+
+## =============================
+## Initial Conditions (ICs) for
+## 2D explosion test
+## =============================
+IC_type = 'explosion2d'
+IC_shockCenter_x = 0.0 # x coordinate of center of circle
+IC_shockCenter_y = 1.0 # y coordinate of center of circle
+IC_shockRad = 0.4 # radius of circle
+# inside of circle
+IC_densIns = 1.0 # rho
+IC_velxIns = 0.0 # u
+IC_velyIns = 0.0 # v
+IC_velzIns = 0.0 # w
+IC_presIns = 1.0 # p
+# outside of circle
+IC_densOut = 0.125 # rho
+IC_velxOut = 0.0 # u
+IC_velyOut = 0.0 # v
+IC_velzOut = 0.0 # w
+IC_presOut = 0.1 # p
+
+## =============================
+## Boundary Conditions (BCs)
+## =============================
+sim_BC = 'outflow'
