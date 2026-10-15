@@ -29,6 +29,9 @@ parser.add_argument('--sim', type=str, nargs='+', default=[],
 parser.add_argument('--grid', type=str, nargs='+', default=[],
                     help='Grid parameters to change. ' \
                     'Same formatting options as simulation parameters.')
+parser.add_argument('--GP', type=str, nargs='+', default=[],
+                    help='Gaussian Process parameters to change. ' \
+                    'Same formatting options as simulation parameters.')
 parser.add_argument('--IC', type=str, nargs='+', default=[],
                     help='Initial condition parameters to change. ' \
                     'Same formatting options as simulation parameters.')
@@ -103,10 +106,11 @@ def replace_params(new_params, all_params, prefix):
     return 
 replace_params(args.sim, params, 'sim')
 replace_params(args.grid, params, 'grid')
+replace_params(args.GP, params, 'GP')
 replace_params(args.IC, params, 'IC')
 
 # create simulation name
-all_param_args = args.sim+args.grid+args.IC
+all_param_args = args.sim+args.grid+args.GP+args.IC
 simulation_name = args.test_problem
 for i in range(0,len(all_param_args),2):
     simulation_name = f"{simulation_name}-{all_param_args[i]}_{all_param_args[i+1]}"
@@ -156,14 +160,14 @@ print(new_par_file)
 chdir(this_run_dir_path)
 run(Path(repo_root+"tools/run_dir_setup.sh").expanduser())
 
-# execute the equivalent of the following shell command: ./hosono.ex run.par > run.log &
+# execute the equivalent of the following shell command: ./hosono-2DMHD.ex run.par > run.log &
 if args.run_code and not args.print_output:
     with open("run.log", "w") as f:
         p = Popen(
-            ["./hosono.ex", new_par_file],
+            ["./hosono-2DMHD.ex", new_par_file],
             stdout=f,
             stderr=f,   # optional: also capture stderr
         )
     print(p.pid)
 else:
-    run(["./hosono.ex", new_par_file])
+    run(["./hosono-2DMHD.ex", new_par_file])

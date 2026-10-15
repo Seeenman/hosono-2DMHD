@@ -43,7 +43,7 @@ parser.add_argument('--sliceIdx2', type=int, default=-1,
 parser.add_argument('--axneq', action='store_false',
                     help='Use this flag to stop the axes from havin equal '
                     'aspect ratio.')
-parser.add_argument('-l', '--logplot', action='store_true',
+parser.add_argument('--logplot', action='store_true',
                     help='whether to plot data on log scale')
 parser.add_argument('-p', '--savepath', default='./images/',
                     help='Relative path to dir where plots should be saved. '

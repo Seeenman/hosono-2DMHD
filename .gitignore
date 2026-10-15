@@ -4,6 +4,7 @@
 
 # build directories
 _build*
+_simulations
 
 # fortran 
 *.o
