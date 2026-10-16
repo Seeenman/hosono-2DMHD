@@ -92,7 +92,7 @@ def plot2dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
         ax.axis('equal')
     ax.set_title(titleStr, fontdict=title_font)
     plt.tight_layout()  # this prevents the x and y labels from being clipped
-    saveName = saveName + var+'_'+'_t'+str(timeIdx).zfill(4)
+    saveName = saveName + var+'_t'+str(timeIdx).zfill(4)
     if custom_clim and len(custom_clim)==2:
         color_plot.set_clim(custom_clim[0], custom_clim[1])
     if savePlot:
