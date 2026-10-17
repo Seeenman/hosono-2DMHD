@@ -98,6 +98,7 @@ grid.o: definitions.o readParamFile.o gridBlock.o gridState.o
 linAlgQuadPrecision.o: definitions.o
 GP.o: definitions.o readParamFile.o linAlgQuadPrecision.o
 boundaryConditions.o: definitions.o readParamFile.o simulation.o gridBlock.o
+eos.o: simulation.o
 convert.o: definitions.o eos.o simulation.o
 initialCondition.o: definitions.o readParamFile.o eos.o simulation.o boundaryConditions.o convert.o gridBlock.o gridState.o
 output.o: definitions.o gridBlock.o gridState.o simulation.o
