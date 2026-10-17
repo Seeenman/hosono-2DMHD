@@ -9,12 +9,13 @@ module timeStep
     use getFluxes, only: getFluxes_
     use GP, only: GP_maxRadius
     use detect, only: detect_ALL
+    use FLICDdivB, only: FLICDdivB_fluxCorrections
 
     implicit none
 
     private
 
-    public timeStep_advanceSolution
+    public :: timeStep_advanceSolution
 
 contains
 
@@ -93,7 +94,9 @@ contains
             ! reconstruct_faceValsWithGP using whatever substage value of U
             ! we are on.
             call getFluxes_(blk)
-            ! Call FLICDdivB here
+
+            ! Call FLICDdivB here for cell centred constrained transport
+            call FLICDdivB_fluxCorrections(blk)
 
             ! only cells flagged by the MOOD loop have new fluxes. Unew
             ! keeps the previous pass's values everywhere else
