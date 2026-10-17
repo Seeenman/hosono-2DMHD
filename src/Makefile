@@ -110,7 +110,7 @@ getFluxes.o: definitions.o gridBlock.o riemannSolver.o GP.o
 detect.o: definitions.o gridBlock.o convert.o
 FLICDdivB.o: definitions.o gridBlock.o
 timeStep.o: definitions.o gridBlock.o gridState.o convert.o boundaryConditions.o reconstruct.o getFluxes.o detect.o FLICDdivB.o
-mhd_driver.o: definitions.o simulation.o GP.o grid.o initialCondition.o output.o cfl.o reconstruct.o
+mhd_driver.o: definitions.o simulation.o GP.o grid.o initialCondition.o output.o cfl.o reconstruct.o timeStep.o
 
 .PHONY: clean
 clean:
