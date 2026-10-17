@@ -14,7 +14,7 @@ git log --oneline --decorate | head -n 1 > $CWD/commit.txt
 
 # compile the latest version of the code
 cd $repo_root/$build_dir
-make new
+make clean && make release
 cd $CWD
 
 # get the files we need
