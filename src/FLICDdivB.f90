@@ -33,14 +33,14 @@ contains
                       - blk%flux(magx_var,ydir,i  ,j+1) & 
                       - blk%flux(magx_var,ydir,i  ,j  ) & 
                       - blk%flux(magx_var,ydir,i-1,j  ) & 
-                      - blk%flux(magx_var,ydir,i-1,j  )
+                      - blk%flux(magx_var,ydir,i-1,j+1)
                 newFlux(magy_var, xdir, i,j) = newFlux(magy_var, xdir, i,j)/8.0
                 ! correction for the magx_var component of the ydir flux
                 newFlux(magx_var,ydir,i,j) = &
                     2 * blk%flux(magx_var,ydir,i  ,j  ) &
                       + blk%flux(magx_var,ydir,i  ,j+1) & 
                       + blk%flux(magx_var,ydir,i  ,j-1) & 
-                      - blk%flux(magy_var,xdir,i+1,j+1) & 
+                      - blk%flux(magy_var,xdir,i+1,j  ) & 
                       - blk%flux(magy_var,xdir,i  ,j  ) & 
                       - blk%flux(magy_var,xdir,i  ,j-1) & 
                       - blk%flux(magy_var,xdir,i+1,j-1)
