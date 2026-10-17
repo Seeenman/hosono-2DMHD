@@ -93,6 +93,7 @@ contains
             ! reconstruct_faceValsWithGP using whatever substage value of U
             ! we are on.
             call getFluxes_(blk)
+            ! Call FLICDdivB here
 
             ! only cells flagged by the MOOD loop have new fluxes. Unew
             ! keeps the previous pass's values everywhere else
@@ -101,6 +102,7 @@ contains
             do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
                 do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
                     if (.not. blk%recompute(i,j)) CYCLE
+                    ! the unsplit finite volume update
                     Unew(:,i,j) = U(:,i,j) &
                         - (dt/dx)*(blk%flux(:,xdir,i+1,j) - blk%flux(:,xdir,i,j)) &
                         - (dt/dy)*(blk%flux(:,ydir,i,j+1) - blk%flux(:,ydir,i,j))
