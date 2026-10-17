@@ -25,8 +25,7 @@ module convert
 
 contains
 
-    ! pure function convert_cons2flux(U, dir) result(Flux)
-    function convert_cons2flux(U, dir) result(Flux)
+    pure function convert_cons2flux(U, dir) result(Flux)
         implicit none
         real, intent(in) :: U(nConsVars)
         integer, intent(in) :: dir
@@ -196,8 +195,7 @@ contains
 
     end function convert_prim2cons
 
-    ! pure function convert_cons2prim(U) result(V)
-    function convert_cons2prim(U) result(V)
+    pure function convert_cons2prim(U) result(V)
         implicit none
         real, intent(in) :: U(nConsVars)
         real :: V(nPrimVars)

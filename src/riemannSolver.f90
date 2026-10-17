@@ -20,8 +20,7 @@ module riemannSolver
 
 contains
 
-    ! pure function riemannSolver_getFaceFlux(uL, uR, dir, rr) result(flux)
-    function riemannSolver_getFaceFlux(uL, uR, dir, rr) result(flux)
+    pure function riemannSolver_getFaceFlux(uL, uR, dir, rr) result(flux)
         ! get high order face averaged flux from weighted sum
         ! of pointwise fluxes at quadrature points.
         ! if dir==xdir then returns F, if dir==ydir then returns G
@@ -47,8 +46,7 @@ contains
 
     end function riemannSolver_getFaceFlux
 
-    ! pure function riemannSolver_getSingleFlux(uL, uR, dir) result(flux)
-    function riemannSolver_getSingleFlux(uL, uR, dir) result(flux)
+    pure function riemannSolver_getSingleFlux(uL, uR, dir) result(flux)
         implicit none
         ! subroutine arguments
         real, intent(in) :: uL(nConsVars), uR(nConsVars)
@@ -66,8 +64,7 @@ contains
 
     end function riemannSolver_getSingleFlux
 
-    ! pure function riemannSolver_fromConsHllcMHD(uL, uR, dir) result(flux)
-    function riemannSolver_fromConsHllcMHD(uL, uR, dir) result(flux)
+    pure function riemannSolver_fromConsHllcMHD(uL, uR, dir) result(flux)
         ! funnction:    riemannSolver_fromConsHllcMHD
         ! Author:       Sean Riedel
         ! purpose:      Given left and right Riemann states 
@@ -126,7 +123,7 @@ contains
             vel_dirN  = velx_var; mag_dirN  = magx_var; mom_dirN  = momx_var
             vel_dirT1 = vely_var; mag_dirT1 = magy_var; mom_dirT1 = momy_var
             vel_dirT2 = velz_var; mag_dirT2 = magz_var; mom_dirT2 = momz_var
-        else if (dir==ydir) then
+        else ! if (dir==ydir) then
             vel_dirN  = vely_var; mag_dirN  = magy_var; mom_dirN  = momy_var
             vel_dirT1 = velx_var; mag_dirT1 = magx_var; mom_dirT1 = momx_var
             vel_dirT2 = velz_var; mag_dirT2 = magz_var; mom_dirT2 = momz_var
