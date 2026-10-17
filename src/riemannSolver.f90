@@ -7,7 +7,7 @@ module riemannSolver
     use definitions, only: nPrimVars, nConsVars, xdir, ydir, &
         dens_var, momx_var, momy_var, momz_var, ener_var, &
         velx_var, vely_var, velz_var, pres_var, magx_var, magy_var, magz_var
-    use simulation, only: sim_riemannSolver
+    use simulation, only: sim_riemannSolverID, sim_hllcMHD
     use eigen, only: eigen_valsFromPrim
     use convert, only: convert_cons2flux, convert_cons2prim
     use GP, only: GP_nQuadrature, GP_quadratureWeights, GP_nQuadratureMax
@@ -53,14 +53,15 @@ contains
         integer, intent(in) :: dir
         real :: flux(nConsVars)
 
-        ! sim_riemannSolver is checked in simulation_init, so the else
-        ! branch should be unreachable. error stop (unlike stop and write)
-        ! is allowed inside of a pure procedure.
-        if ((sim_riemannSolver=="hllc") .or. (sim_riemannSolver=="hllcmhd")) then
+        ! sim_riemannSolverID is set in simulation_init, which also checks that
+        ! sim_riemannSolver is valid, so the default case should be unreachable.
+        ! error stop (unlike stop and write) is allowed inside of a pure procedure.
+        select case (sim_riemannSolverID)
+        case (sim_hllcMHD)
             flux = riemannSolver_fromConsHllcMHD(uL, uR, dir)
-        else
-            error stop "riemannSolver_getSingleFlux: unrecognized sim_riemannSolver "//trim(sim_riemannSolver)
-        end if
+        case default
+            error stop "riemannSolver_getSingleFlux: unrecognized sim_riemannSolverID"
+        end select
 
     end function riemannSolver_getSingleFlux
 

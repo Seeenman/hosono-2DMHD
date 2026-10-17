@@ -15,6 +15,11 @@ module simulation
     character(len=max_string_length) :: sim_riemannSolver, sim_BC, &
                                         sim_dataFileBaseName
 
+    ! Riemann solver choices. sim_riemannSolver is converted to one of these
+    ! once in simulation_init so that the string isn't compared inside of hot loops
+    integer, parameter :: sim_hllcMHD = 1
+    integer :: sim_riemannSolverID
+
     ! output type
     logical :: sim_outputHdf5, sim_outputAscii, sim_forceHydro
 
@@ -56,6 +61,7 @@ contains
         ! Riemann solver routines themselves can stay pure
         select case (trim(sim_riemannSolver))
         case ('hllc', 'hllcmhd')
+            sim_riemannSolverID = sim_hllcMHD
         case default
             write(*,*) "==================================================================="
             write(*,*) "Unrecognized choice of riemann solver: ", trim(sim_riemannSolver)
