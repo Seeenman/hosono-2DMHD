@@ -32,7 +32,7 @@ LDLIBS   := -lhdf5_fortran -lhdf5
 
 # Common compiler flags
 FFLAGS_COMMON := -cpp -Wall -Wextra -Wimplicit-interface -Wuninitialized \
-                 -ffree-line-length-none -fimplicit-none -fPIC \
+                 -ffree-line-length-none -fimplicit-none \
                  -fdefault-real-8 -fdefault-double-8 -fopenmp \
                  -ffpe-summary=invalid,zero,overflow,underflow
 
@@ -43,7 +43,7 @@ FFLAGS_DEBUG := -O0 -g -ggdb -fbacktrace -fcheck=all \
                 -fmax-errors=3
 
 # Optimization flags
-FFLAGS_RELEASE := -O3 -march=native -funroll-loops
+FFLAGS_RELEASE := -O3 -march=native -funroll-loops -flto=auto
 
 # Default build mode (?= means assign only if not already set)
 MODE ?= debug
