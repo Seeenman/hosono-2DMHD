@@ -23,6 +23,7 @@ contains
         integer :: rr
 
 
+        !$omp parallel do collapse(2) default(none) shared(blk) private(rr,uL,uR)
         do j = blk%strtIdx(ydir)-1, blk%stopIdx(ydir)+2
             do i = blk%strtIdx(xdir)-1, blk%stopIdx(xdir)+2
                 ! only recompute fluxes at faces of cells flagged by the
@@ -82,6 +83,7 @@ contains
                 end if
             end do
         end do
+        !$omp end parallel do
 
     end subroutine getFluxes_
 

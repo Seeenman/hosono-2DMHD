@@ -15,7 +15,7 @@ module reconstruct
 
 contains
 
-    pure subroutine reconstruct_faceValsWithGP(blk, U)
+    subroutine reconstruct_faceValsWithGP(blk, U)
         ! purpose:   Reconstruct high order pointwise values at cell faces to be
         !            used to compute high order fluxes at cell faces. 
         ! 
@@ -46,8 +46,8 @@ contains
         integer :: ip,jp,k
         integer :: q
         real :: pres
-        logical :: cellIsAdmissible, faceValsAreAdmissible
-        logical, allocatable :: reconstructCell(:,:), reconstructNextPass(:,:)
+        logical :: faceValsAreAdmissible
+        logical, allocatable :: cellIsAdmissible(:,:), reconstructCell(:,:), reconstructNextPass(:,:)
 
 
         ! reconstruct on the interior plus two rings of guard cells. getFluxes_
@@ -57,26 +57,30 @@ contains
         ! transport). Requires NGC >= GP_maxRadius+2 (see grid.f90).
         ! only reconstruct cells flagged by the MOOD loop. Their neighbors'
         ! faces are unchanged
+        allocate(cellIsAdmissible(blk%minIdx(xdir):blk%maxIdx(xdir), &
+                                  blk%minIdx(ydir):blk%maxIdx(ydir)))
         allocate(reconstructCell(blk%minIdx(xdir):blk%maxIdx(xdir), &
                                  blk%minIdx(ydir):blk%maxIdx(ydir)))
         allocate(reconstructNextPass(blk%minIdx(xdir):blk%maxIdx(xdir), &
                                      blk%minIdx(ydir):blk%maxIdx(ydir)))
         reconstructCell = blk%recompute
 
-        ! reconstruct until all Riemann states are admissible. First order
-        ! face values are the cell averages, so this always terminates
         faceValsAreAdmissible = .false.
 
+        ! reconstruct until all Riemann states are admissible. First order
+        ! face values are the cell averages, so this loop always terminates.
+        ! First order values are not checked for admissibility.
         do while (.not. faceValsAreAdmissible)
 
-            faceValsAreAdmissible = .true.
-            reconstructNextPass = .false.
+            cellIsAdmissible = .true.
 
+            !$omp parallel do collapse(2) default(none) &
+            !$omp shared(blk, U, GP_nStenc, GP_nQuadrature, GP_predictionVectors, &
+            !$omp GP_stencIdxs, cellIsAdmissible, reconstructCell) &
+            !$omp private(k,f,ia,ja,ip,jp,fa,rr,q,ns,nq,pres,stencil_data)
             do j = blk%strtIdx(ydir)-2, blk%stopIdx(ydir)+2
                 do i = blk%strtIdx(xdir)-2, blk%stopIdx(xdir)+2
                     if (.not. reconstructCell(i,j)) CYCLE
-
-                    cellIsAdmissible = .true.
 
                     do f=1,4 ! loop over all four faces of the cell
 
@@ -118,14 +122,25 @@ contains
                                 pres = convert_cons2pres(blk%faceVals(1:nConsVars, q, f, i, j))
                                 if (.not. (detect_CAD(blk%faceVals(dens_var, q, f, i, j), pres) .and. &
                                            detect_PAD(blk%faceVals(dens_var, q, f, i, j), pres))) then
-                                    cellIsAdmissible = .false.
+                                    cellIsAdmissible(i,j) = .false.
                                 end if
                             end do
 
-                        end if
+                        end if ! matches: else ! high order GP reconstruction
 
-                    end do
+                    end do ! matches: do f=1,4 ! loop over all four faces of the cell
 
+                end do ! matches: do i = blk%strtIdx(xdir)-2, blk%stopIdx(xdir)+2
+            end do ! matches: do j = blk%strtIdx(ydir)-2, blk%stopIdx(ydir)+2
+            !$omp end parallel do
+
+            ! This has to be a separate serial loop because we can't
+            ! write to neighboring cells inside of a loop wrapped in an
+            ! openmp directive
+            faceValsAreAdmissible = .true.
+            reconstructNextPass = .false.
+            do j = blk%strtIdx(ydir)-2, blk%stopIdx(ydir)+2
+                do i = blk%strtIdx(xdir)-2, blk%stopIdx(xdir)+2
                     ! lower the order of a cell with inadmissible Riemann states.
                     ! Since faces use the lower order of the two cells sharing
                     ! them (EDP1 from GP-MOOD paper), the neighbors' faces are lowered
@@ -137,7 +152,7 @@ contains
                     ! adjacent neighbors. 
                     ! This is done so that their fluxes and cell average updates are
                     ! recomputed and they are checked by the MOOD loop.
-                    if (.not. cellIsAdmissible) then
+                    if (.not. cellIsAdmissible(i,j)) then
                         call gridBlock_lowerOrder(blk, i, j)
                         reconstructNextPass(i-1:i+1, j) = .true.
                         reconstructNextPass(i, j-1:j+1) = .true.

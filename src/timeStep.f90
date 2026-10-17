@@ -28,11 +28,13 @@ contains
 
         state%U = timeStep_RK3(dt, blk, state%U)
         
+        !$omp parallel do collapse(2) default(none) shared(state) private(i,j)
         do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
             do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
                 state%V(:,i,j) = convert_cons2prim(state%U(:,i,j))
             end do
         end do
+        !$omp end parallel do
 
         call boundaryConditions_applyBlk(blk, state%U)
         call boundaryConditions_applyBlk(blk, state%V)
@@ -94,6 +96,8 @@ contains
 
             ! only cells flagged by the MOOD loop have new fluxes. Unew
             ! keeps the previous pass's values everywhere else
+
+            !$omp parallel do collapse(2) default(none) shared(blk,U,Unew,dt,dx,dy) private(i,j)
             do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
                 do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
                     if (.not. blk%recompute(i,j)) CYCLE
@@ -102,6 +106,7 @@ contains
                         - (dt/dy)*(blk%flux(:,ydir,i,j+1) - blk%flux(:,ydir,i,j))
                 end do
             end do
+            !$omp end parallel do
 
             call detect_ALL(blk, U, Unew, exit_mood_loop)
 

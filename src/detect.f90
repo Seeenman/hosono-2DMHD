@@ -51,6 +51,7 @@ contains
         logical :: admissible, shock1, shock2, shock3
         logical :: sx1, sx2, sx3, sy1, sy2, sy3, smooth1, smooth2
         logical, allocatable :: checkCell(:,:) ! local copy of the state that blk%recompute was in when passed into this routine
+        logical, allocatable :: lowerCell(:,:) ! cells that failed detection and need their order lowered
 
         exit_mood_loop = .true.
 
@@ -59,12 +60,22 @@ contains
         ! blk%recompute is then rebuilt from just the cells that fail
         allocate(checkCell(blk%minIdx(xdir):blk%maxIdx(xdir), &
                            blk%minIdx(ydir):blk%maxIdx(ydir)))
+        allocate(lowerCell(blk%minIdx(xdir):blk%maxIdx(xdir), &
+                           blk%minIdx(ydir):blk%maxIdx(ydir)))
         checkCell = blk%recompute
         blk%recompute = .false.
+        lowerCell = .false.
 
         dx = blk%dl(xdir)
         dy = blk%dl(ydir)
 
+        !$omp parallel do collapse(2) default(none) &
+        !$omp shared(blk, U, Unew, checkCell, lowerCell, dx, dy) &
+        !$omp private(presNew, admissible, V, Vi_plus, Vi_minus, Vj_plus, Vj_minus, &
+        !$omp shock1, shock2, shock3, div_vel, mach, pres_gradient, sigma_v, sigma_M, sigma_p, &
+        !$omp densNew, dens1, dens2, dens3, dens4, dens5, min_dens, max_dens, &
+        !$omp ii, jj, counter, dens2ndDerivs, min_dens2ndDerivs, max_dens2ndDerivs, &
+        !$omp sx1, sx2, sx3, sy1, sy2, sy3, smooth1, smooth2)
         do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
             do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
 
@@ -83,16 +94,14 @@ contains
                 ! -------------------------
                 admissible = detect_CAD(Unew(dens_var,i,j), presNew)
                 if (.not. admissible) then
-                    call gridBlock_lowerOrder(blk, i, j) ! this lowers blk%scheme(:,i,j) by one and sets blk%recompute(k,l) to .true. for (k,l) = (i,j), (i+1,j), (i-1,j), (i,j+1), (i,j-1)
-                    exit_mood_loop = .false.
+                    lowerCell(i,j) = .true.
                     CYCLE ! go to next index
                 end if
 
                 ! Check for positivity
                 admissible = detect_PAD(Unew(dens_var,i,j), presNew)
                 if (.not. admissible) then
-                    call gridBlock_lowerOrder(blk, i, j)
-                    exit_mood_loop = .false.
+                    lowerCell(i,j) = .true.
                     CYCLE ! go to next index
                 end if
 
@@ -198,13 +207,25 @@ contains
                 smooth2 = (sx1 .and. sx3 .and. sy1 .and. sy3)
 
                 if (.not. (smooth1 .or. smooth2)) then
-                    call gridBlock_lowerOrder(blk, i, j)
-                    exit_mood_loop = .false.
+                    lowerCell(i,j) = .true.
                 end if
-                
+
             end do
         end do
-        
+        !$omp end parallel do
+
+        ! This has to be a separate serial loop because gridBlock_lowerOrder
+        ! writes to neighboring cells, which isn't safe inside of a loop
+        ! wrapped in an openmp directive
+        do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
+            do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
+                if (lowerCell(i,j)) then
+                    call gridBlock_lowerOrder(blk, i, j) ! this lowers blk%scheme(:,i,j) by one and sets blk%recompute(k,l) to .true. for (k,l) = (i,j), (i+1,j), (i-1,j), (i,j+1), (i,j-1)
+                    exit_mood_loop = .false.
+                end if
+            end do
+        end do
+
     end subroutine detect_ALL
 
     pure function detect_PAD(dens, pres) result(admissible)
