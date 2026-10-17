@@ -38,7 +38,7 @@ contains
         ! local variables
         integer :: ns 
         integer :: nq 
-        real :: stencil_data(GP_nStencMax,nConsVars)
+        real :: stencil_data(nConsVars,GP_nStencMax)
         integer :: rr
         integer :: i,j
         integer :: f ! face index (1=north, 2=south, 3=east, 4=west)
@@ -109,13 +109,19 @@ contains
                             do k=1, ns
                                 ip = GP_stencIdxs(xdir, k, rr) + i
                                 jp = GP_stencIdxs(ydir, k, rr) + j
-                                stencil_data(k,1:nConsVars) = U(1:nConsVars,ip,jp)
+                                stencil_data(1:nConsVars,k) = U(1:nConsVars,ip,jp)
                             end do
-                        
-                            ! Get the pointwise values at face quadrature points
-                            blk%faceVals(1:nConsVars, 1:nq, f, i, j) = TRANSPOSE(MATMUL(&
-                                TRANSPOSE(GP_predictionVectors(1:ns, 1:nq, f, rr)),&
-                                stencil_data(1:ns, 1:nConsVars)))
+
+                            ! Get the pointwise values at face quadrature points.
+                            ! Written as explicit loops rather than with MATMUL and TRANSPOSE
+                            ! to avoid allocating array temporaries on the heap for every face
+                            do q=1, nq
+                                blk%faceVals(1:nConsVars, q, f, i, j) = 0.0
+                                do k=1, ns
+                                    blk%faceVals(1:nConsVars, q, f, i, j) = blk%faceVals(1:nConsVars, q, f, i, j) + &
+                                        GP_predictionVectors(k, q, f, rr)*stencil_data(1:nConsVars, k)
+                                end do
+                            end do
 
                             ! CAD and PAD check on the Riemann states
                             do q=1, nq
