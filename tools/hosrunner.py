@@ -48,6 +48,10 @@ parser.add_argument('--no_date', action='store_true',
                     help='Do not create a new directory for today\'s runs.')
 parser.add_argument('--run_code', action='store_true',
                     help='Recompile and run the code.')
+parser.add_argument('--time', action='store_true',
+                    help='Time how long the run takes and '
+                    'save the result in a file called time.txt. '
+                    'Runs in the background with output saved in run.log.')
 parser.add_argument('--print_output', action='store_true',
                     help='Print the output of the code to the '
                     'terminal instead of saving it in a run.log file.')
@@ -159,9 +163,16 @@ print(new_par_file)
 # run the run directory setup shell script
 chdir(this_run_dir_path)
 run(Path(repo_root+"tools/run_dir_setup.sh").expanduser())
-
-# execute the equivalent of the following shell command: ./hosono-2DMHD.ex run.par > run.log &
-if args.run_code and not args.print_output:
+if args.time:
+    # execute the equivalent of: (time ./hosono-2DMHD.ex run.par > run.log 2>&1) 2> time.txt &
+    with open("time.txt", "w") as f:
+        p = Popen(
+            ["bash", "-c", 'time ./hosono-2DMHD.ex "$1" > run.log 2>&1', "bash", new_par_file],
+            stderr=f,
+        )
+    print(p.pid)
+elif args.run_code and not args.print_output:
+    # execute the equivalent of the following shell command: ./hosono-2DMHD.ex run.par > run.log &
     with open("run.log", "w") as f:
         p = Popen(
             ["./hosono-2DMHD.ex", new_par_file],
