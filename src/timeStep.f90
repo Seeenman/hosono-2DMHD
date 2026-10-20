@@ -78,6 +78,7 @@ contains
         ! and compute everything on the first pass of the MOOD loop
         blk%scheme = GP_maxRadius
         blk%recompute = .true.
+        blk%recomputeFLICD = .true.
 
         exit_mood_loop = .false.
 
