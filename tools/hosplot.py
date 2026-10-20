@@ -1,10 +1,50 @@
+# PYTHON_ARGCOMPLETE_OK
 '''
 Command line tool for plotting hdf5 data from
 the hosono FVM code.
 '''
-import hosonoPlotUtils as pu
 import argparse
+import glob
+import os
+import re
 from pathlib import Path
+
+# tab completion is optional, hosplot runs fine without argcomplete
+try:
+    import argcomplete
+except ImportError:
+    argcomplete = None
+
+
+# tab completion helpers. These run on every tab press so heavy
+# imports are done inside them rather than at the top of the file.
+def datfile_completer(prefix, **kwargs):
+    '''Complete directories and data file base names, e.g. data/run.'''
+    completions = set()
+    for path in glob.glob(prefix+'*'):
+        if os.path.isdir(path):
+            completions.add(path+'/')
+        elif re.search(r'\d{5}\.h5$', path):
+            completions.add(path[:-len('00000.h5')])
+    return sorted(completions)
+
+
+def var_completer(prefix, parsed_args, **kwargs):
+    '''Complete the names of the 2D/3D datasets in the first data file.'''
+    import h5py
+    files = sorted(glob.glob(parsed_args.datfile+'[0-9]'*5+'.h5'))
+    if not files:
+        return []
+    with h5py.File(files[0], 'r') as f:
+        return [k for k in f if isinstance(f[k], h5py.Dataset)
+                and f[k].ndim >= 2 and k.startswith(prefix)]
+
+
+def cmap_completer(prefix, **kwargs):
+    '''Complete matplotlib colormap names.'''
+    import matplotlib
+    return [c for c in matplotlib.colormaps if c.startswith(prefix)]
+
 
 # create argument parser object
 parser = argparse.ArgumentParser(prog='hosplot',
@@ -13,14 +53,16 @@ parser = argparse.ArgumentParser(prog='hosplot',
                                  epilog='Written by Sean Riedel')
 
 # add arguments to the parser object
-parser.add_argument('datfile', help='Relative path to one of the data files.')
+parser.add_argument('datfile', help='Relative path to one of the data files.'
+                    ).completer = datfile_completer
 parser.add_argument('var', nargs='+',
-                    help='Variable(s) you wish to plot, e.g., pres for pressure.')
+                    help='Variable(s) you wish to plot, e.g., pres for pressure.'
+                    ).completer = var_completer
 parser.add_argument('-s', '--saveplot', action='store_true',
                     help='Save the generated plot(s)')
 parser.add_argument('-d', '--display', action='store_true',
                     help='Show the generated plot(s)')
-parser.add_argument('-n', '--direction', default='z',
+parser.add_argument('-n', '--direction', default='z', choices=['x', 'y', 'z'],
                     help='Normal direction in 2D, axis to plot in 1D')
 parser.add_argument('-i', '--idx', type=int, default=-1,
                     help='Specify a plot file index.'
@@ -54,20 +96,33 @@ parser.add_argument('--pdfsave', action='store_true',
                     help='Whether or not to save the plot(s) as a pdf.')
 parser.add_argument('--cmap', default='jet',
                     help='Specify a color map to use. '
-                    "Defaults to 'jet'.")
+                    "Defaults to 'jet'.").completer = cmap_completer
 parser.add_argument('--clim', nargs='+', type=float, default=0.0,
                     help='Specify limits for the colorbar.')
 parser.add_argument('--contours', action='store_true',
                     help='create a contour plot')
 parser.add_argument('--contourbg', action='store_true',
-                    help='Draw black contour lines over the usual colormap '
-                    'coloring. Implies --contours.')
+                    help='Black contour lines over the colormap coloring. '
+                    'Implies --contours.')
 parser.add_argument('--nlevels', type=int, default=30,
                     help='Number of contour lines to draw with --contours '
                     'or --contourbg. Defaults to 30.')
 
+# answer a tab completion request if there is one (exits when it does)
+if argcomplete is not None:
+    # zsh shows each completion on one line and cuts off long help
+    # text, so only show the first sentence when completing
+    if '_ARGCOMPLETE' in os.environ:
+        for action in parser._actions:
+            if action.help:
+                action.help = action.help.split('. ')[0].rstrip('.')
+    argcomplete.autocomplete(parser)
+
 # parse the command line arguments to the script
 args = parser.parse_args()
+
+# imported here so tab completion doesn't pay for matplotlib/h5py
+import hosonoPlotUtils as pu
 
 # get run name and base data file name
 base_name = args.datfile
