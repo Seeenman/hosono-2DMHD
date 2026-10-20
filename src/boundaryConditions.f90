@@ -1,7 +1,7 @@
 module boundaryConditions
 
 
-    use definitions, only: ndim, xdir, ydir, nfaces
+    use definitions, only: ndim, xdir, ydir
     use simulation, only: sim_BC
     use gridBlock, only: gridBlock_t
 
@@ -198,7 +198,7 @@ contains
         ! local variables
         integer :: i, j, ip, jp
         logical :: eitherRecomp
-        integer :: lowerScheme(nfaces)
+        integer :: lowerScheme
 
         ! x direction. Every row is swept, guard rows included, so that the
         ! corner guard cells are reached when the y direction is swept below.
@@ -220,9 +220,9 @@ contains
                 blk%recompute(i, j) = eitherRecomp
                 blk%recompute(ip,j) = eitherRecomp
                 ! propagate scheme
-                lowerScheme = MIN(blk%scheme(:,i,j), blk%scheme(:,ip,j))
-                blk%scheme(:,i, j) = lowerScheme
-                blk%scheme(:,ip,j) = lowerScheme
+                lowerScheme = MIN(blk%scheme(i,j), blk%scheme(ip,j))
+                blk%scheme(i, j) = lowerScheme
+                blk%scheme(ip,j) = lowerScheme
             end do
         end do
 
@@ -245,9 +245,9 @@ contains
                 blk%recompute(i,j ) = eitherRecomp
                 blk%recompute(i,jp) = eitherRecomp
                 ! propagate scheme 
-                lowerScheme = MIN(blk%scheme(:,i,j), blk%scheme(:,i,jp))
-                blk%scheme(:,i,j ) = lowerScheme
-                blk%scheme(:,i,jp) = lowerScheme
+                lowerScheme = MIN(blk%scheme(i,j), blk%scheme(i,jp))
+                blk%scheme(i,j ) = lowerScheme
+                blk%scheme(i,jp) = lowerScheme
             end do
         end do
 

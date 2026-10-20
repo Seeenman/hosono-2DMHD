@@ -42,7 +42,7 @@ contains
         integer :: rr
         integer :: i,j
         integer :: f ! face index (1=north, 2=south, 3=east, 4=west)
-        integer :: fa, ia, ja ! adjacent face index and coordinates
+        integer :: ia, ja ! offset to the neighbor sharing face f
         integer :: ip,jp,k
         integer :: q
         real :: pres
@@ -77,7 +77,7 @@ contains
             !$omp parallel do collapse(2) default(none) &
             !$omp shared(blk, U, GP_nStenc, GP_nQuadrature, GP_predictionVectors, &
             !$omp GP_stencIdxs, cellIsAdmissible, reconstructCell) &
-            !$omp private(k,f,ia,ja,ip,jp,fa,rr,q,ns,nq,pres,stencil_data)
+            !$omp private(k,f,ia,ja,ip,jp,rr,q,ns,nq,pres,stencil_data)
             do j = blk%strtIdx(ydir)-2, blk%stopIdx(ydir)+2
                 do i = blk%strtIdx(xdir)-2, blk%stopIdx(xdir)+2
                     if (.not. reconstructCell(i,j)) CYCLE
@@ -85,18 +85,18 @@ contains
                     do f=1,4 ! loop over all four faces of the cell
 
                         if (f==north) then
-                            fa = south; ia=0; ja=1
+                            ia=0; ja=1
                         else if (f==south) then
-                            fa = north; ia=0; ja=-1
+                            ia=0; ja=-1
                         else if (f==east) then
-                            fa = west; ia=1; ja=0
+                            ia=1; ja=0
                         else if (f==west) then
-                            fa = east; ia=-1; ja=0
+                            ia=-1; ja=0
                         end if
 
                         ! get the GP radius that we are reconstructing this face with
                         ! according to the EDP1 method from the GP-MOOD paper
-                        rr = MIN(blk%scheme(f,i,j), blk%scheme(fa,i+ia,j+ja))
+                        rr = MIN(blk%scheme(i,j), blk%scheme(i+ia,j+ja))
 
                         if (rr==0) then ! FOG
                             blk%faceVals(1:nConsVars, 1, f, i, j) = U(1:nConsVars,i,j)

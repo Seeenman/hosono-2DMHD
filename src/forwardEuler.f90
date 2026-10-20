@@ -47,7 +47,7 @@ contains
 
         ! reconstruct face values at all quadrature points at the correct
         ! order based on blk%scheme. blk%scheme holds the radius of the
-        ! GP method to be used for each face of each cell. 
+        ! GP method to be used in each cell. 
         call reconstruct_faceValsWithGP(blk, U)
 
         ! fill in fluxes. Don't need to pass in U because this reads

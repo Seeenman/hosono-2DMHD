@@ -58,13 +58,15 @@ module gridBlock
         real, allocatable :: fluxRaw(:,:,:,:)
 
         ! ---- MOOD scheme cascade ----
-        ! which reconstruction scheme to use at each face of each cell
+        ! which reconstruction scheme to use in each cell
         ! 3->7th order GP-R3
         ! 2->5th order GP-R2
         ! 1->3rd order GP-R1
         ! 0->1st order Godunov (FOG)
-        ! (faceIdx, i, j)
-        integer, allocatable :: scheme(:,:,:)
+        ! A face is reconstructed with the lower scheme of the two cells
+        ! sharing it (EDP1 from the GP-MOOD paper)
+        ! (i, j)
+        integer, allocatable :: scheme(:,:)
 
         ! whether a cell's face values, fluxes, and RK substage update need to be
         ! recomputed on the next iteration of the MOOD loop inside Forward Euler.
@@ -143,8 +145,8 @@ contains
                              blk%minIdx(xdir):blk%maxIdx(xdir), &
                              blk%minIdx(ydir):blk%maxIdx(ydir)))
 
-        ! MOOD scheme/GP radius used at each face of each cell
-        allocate(blk%scheme(nfaces, &
+        ! MOOD scheme/GP radius used in each cell
+        allocate(blk%scheme( &
             blk%minIdx(xdir):blk%maxIdx(xdir), &
             blk%minIdx(ydir):blk%maxIdx(ydir)))
 
@@ -213,7 +215,7 @@ contains
         ! local variables
         integer :: ii, jj
 
-        blk%scheme(:,i,j) = MAX(blk%scheme(:,i,j) - 1, 0)
+        blk%scheme(i,j) = MAX(blk%scheme(i,j) - 1, 0)
 
         blk%recompute(i,   j  ) = .true.
         blk%recompute(i+1, j  ) = .true.

@@ -85,7 +85,7 @@ contains
 
                 ! the first order scheme is the last one in the cascade
                 ! so it is always accepted
-                if (ALL(blk%scheme(:,i,j) <= 0)) CYCLE ! go to next index
+                if (blk%scheme(i,j) <= 0) CYCLE ! go to next index
 
                 ! pressure is computed directly from Unew rather than with
                 ! convert_cons2prim because the eos floors negative pressures
@@ -222,7 +222,7 @@ contains
         do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
             do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
                 if (lowerCell(i,j)) then
-                    ! this lowers the value of blk%scheme(:,i,j) by 1 and sets
+                    ! this lowers the value of blk%scheme(i,j) by 1 and sets
                     ! blk%recompute(k,l) to .true. for
                     ! (k,l) = (i,j), (i+1,j), (i-1,j), (i,j+1), (i,j-1)
                     ! it also sets blk%recomputeFLICD to .true. for

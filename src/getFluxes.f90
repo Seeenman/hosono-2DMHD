@@ -43,7 +43,7 @@ contains
                     uL = blk%faceVals(:, :, east, i-1, j)
 
                     ! the GP radius used for this face
-                    rr = MIN(blk%scheme(west,i,j), blk%scheme(east,i-1,j))
+                    rr = MIN(blk%scheme(i,j), blk%scheme(i-1,j))
 
                     ! the flux at the i-1/2 interface
                     blk%fluxRaw(:, xdir, i, j) = riemannsolver_getFaceFlux(uL, uR, xdir, rr)
@@ -77,7 +77,7 @@ contains
                     uL = blk%faceVals(:, :, north, i, j-1)
 
                     ! the GP radius used for this face
-                    rr = MIN(blk%scheme(south,i,j), blk%scheme(north,i,j-1))
+                    rr = MIN(blk%scheme(i,j), blk%scheme(i,j-1))
 
                     ! the flux at the j-1/2 interface
                     blk%fluxRaw(:, ydir, i, j) = riemannsolver_getFaceFlux(uL, uR, ydir, rr)
