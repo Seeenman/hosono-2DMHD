@@ -17,10 +17,59 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+from matplotlib.collections import QuadMesh
 import glob
 
+def draw2dData(x, y, var_data, colormap, logOfData=False, contourPlot=False,
+               contourBackground=False):
+    """
+    Draw 2D data on the current axes.
+
+    Draws a pcolormesh, contour lines colored by the colormap, or (with
+    contourBackground) black contour lines over the pcolormesh. logOfData
+    puts both the coloring and the contour levels on a log scale.
+    Returns the object to build the colorbar from and a save name prefix.
+    """
+    orig_map = plt.get_cmap(colormap)
+    norm = colors.LogNorm() if logOfData else None
+
+    if not contourPlot:
+        return plt.pcolormesh(x, y, var_data, cmap=orig_map, norm=norm), ''
+
+    if contourBackground:
+        color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map, norm=norm)
+        saveName = '_contoursbg_'
+    else:
+        color_plot = None
+        saveName = '_contours_'
+
+    # log spaced levels can only be built from the positive data
+    level_data = var_data[var_data > 0] if logOfData else var_data
+    if level_data.size == 0 or level_data.min() == level_data.max():
+        # contour needs increasing levels, so fall back to pcolormesh for a constant field
+        if color_plot is None:
+            color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map, norm=norm)
+        return color_plot, saveName
+
+    n_levels = 30
+    vmin, vmax = level_data.min(), level_data.max()
+    if logOfData:
+        levels = np.geomspace(vmin, vmax, n_levels)
+        norm = colors.LogNorm(vmin, vmax)
+    else:
+        levels = np.linspace(vmin, vmax, n_levels)
+
+    if contourBackground:
+        plt.contour(x, y, var_data, levels=levels, colors='k', linewidths=0.6)
+    else:
+        color_plot = plt.contour(x, y, var_data, levels=levels, cmap=orig_map,
+                                 norm=norm, linewidths=0.6)
+
+    return color_plot, saveName
+
 def plot2dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
-                     contourPlot=False, relSavePath='./', axeq=True, logOfData=False, 
+                     contourPlot=False, contourBackground=False,
+                     relSavePath='./', axeq=True, logOfData=False,
                      pdfSave=False, custom_clim=None, colormap='jet', showPlot=False,
                      savePlot=True):
 
@@ -60,30 +109,12 @@ def plot2dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
     var_data = var_data[:, :]
     coord_idxs = [0, 1]
 
-    # create the grid to plot with
-    X, Y = np.meshgrid(x, y)
-
     # Define font properties for plot
     title_font = {'size': 18}
     label_font = {'size': 14}
     # plot the data
-    orig_map = plt.get_cmap(colormap)
-    saveName = ''
-    if logOfData:
-        color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map,
-                                    norm=colors.LogNorm())
-    elif contourPlot:
-        n_levels = 30
-        vmin, vmax = var_data.min(), var_data.max()
-        if vmin == vmax:
-            # contour needs increasing levels, so fall back to pcolormesh for a constant field
-            color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map)
-        else:
-            levels=np.linspace(vmin, vmax, n_levels)
-            color_plot = plt.contour(X,Y, var_data, levels=levels, cmap=orig_map, linewidths=0.6)
-        saveName = '_contours_'
-    else:
-        color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map)
+    color_plot, saveName = draw2dData(x, y, var_data, colormap, logOfData,
+                                      contourPlot, contourBackground)
     plt.colorbar(color_plot, label=var)  # this shows the colorbar
     axis_labels = ['x', 'y', 'z']
     ax.set_xlabel(axis_labels[coord_idxs[0]], fontdict=label_font)
@@ -97,7 +128,9 @@ def plot2dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
         color_plot.set_clim(custom_clim[0], custom_clim[1])
     if savePlot:
         if pdfSave:
-            color_plot.set_linewidth(0.0001)
+            # hide pcolormesh cell edges, but leave contour lines alone
+            if isinstance(color_plot, QuadMesh):
+                color_plot.set_linewidth(0.0001)
             plt.savefig(relSavePath+saveName+".pdf")
         else:
             plt.savefig(relSavePath+saveName+".png")
@@ -109,7 +142,7 @@ def plot2dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
 
 def plot3dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
                      sliceNormalTo: str, sliceIdx=-1, contourPlot=False,
-                     relSavePath='./', axeq=True, logOfData=False, pdfSave=False,
+                     contourBackground=False, relSavePath='./', axeq=True, logOfData=False, pdfSave=False,
                      custom_clim=False, colormap='jet', showPlot=False,
                      savePlot=True):
 
@@ -186,30 +219,12 @@ def plot3dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
         print("sliceNormalTo given invalid parameter value of "+sliceNormalTo)
         return
 
-    # create the grid to plot with
-    X, Y = np.meshgrid(x, y)
-
     # Define font properties for plot
     title_font = {'size': 18}
     label_font = {'size': 14}
     # plot the data
-    orig_map = plt.get_cmap(colormap)
-    saveName = ''
-    if logOfData:
-        color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map,
-                                    norm=colors.LogNorm())
-    elif contourPlot:
-        n_levels = 30
-        vmin, vmax = var_data.min(), var_data.max()
-        if vmin == vmax:
-            # contour needs increasing levels, so fall back to pcolormesh for a constant field
-            color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map)
-        else:
-            levels=np.linspace(vmin, vmax, n_levels)
-            color_plot = plt.contour(X,Y, var_data, levels=levels, cmap=orig_map, linewidths=0.6)
-        saveName = '_contours_'
-    else:
-        color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map)
+    color_plot, saveName = draw2dData(x, y, var_data, colormap, logOfData,
+                                      contourPlot, contourBackground)
     plt.colorbar(color_plot, label=var)  # this shows the colorbar
     axis_labels = ['x', 'y', 'z']
     ax.set_xlabel(axis_labels[coord_idxs[0]], fontdict=label_font)
@@ -223,7 +238,9 @@ def plot3dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
         color_plot.set_clim(custom_clim[0], custom_clim[1])
     if savePlot:
         if pdfSave:
-            color_plot.set_linewidth(0.0001)
+            # hide pcolormesh cell edges, but leave contour lines alone
+            if isinstance(color_plot, QuadMesh):
+                color_plot.set_linewidth(0.0001)
             plt.savefig(relSavePath+saveName+".pdf")
         else:
             plt.savefig(relSavePath+saveName+".png")

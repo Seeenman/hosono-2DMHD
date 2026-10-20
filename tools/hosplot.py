@@ -59,6 +59,9 @@ parser.add_argument('--clim', nargs='+', type=float, default=0.0,
                     help='Specify limits for the colorbar.')
 parser.add_argument('--contours', action='store_true',
                     help='create a contour plot')
+parser.add_argument('--contourbg', action='store_true',
+                    help='Draw black contour lines over the usual colormap '
+                    'coloring. Implies --contours.')
 
 # parse the command line arguments to the script
 args = parser.parse_args()
@@ -66,6 +69,10 @@ args = parser.parse_args()
 # get run name and base data file name
 base_name = args.datfile
 run_name = base_name.split('/')[-1]
+
+# contour lines over the coloring is still a contour plot
+if args.contourbg:
+    args.contours = True
 
 # make sure to at least display a plot
 if not args.saveplot and not args.display:
@@ -117,7 +124,9 @@ for var_to_plot in args.var:
     if args.hdf5_data_dim == 3:
         def plot2D(i):
             pu.plot3dVar2dSlice(var_to_plot, base_name, i, args.direction,
-                                contourPlot=args.contours, savePlot=args.saveplot, showPlot=args.display,
+                                contourPlot=args.contours,
+                                contourBackground=args.contourbg,
+                                savePlot=args.saveplot, showPlot=args.display,
                                 relSavePath=save_path, logOfData=args.logplot,
                                 pdfSave=args.pdfsave, axeq=args.axneq,
                                 colormap=args.cmap,
@@ -126,7 +135,9 @@ for var_to_plot in args.var:
     else:
         def plot2D(i):
             pu.plot2dVar2dSlice(var_to_plot, base_name, i, 
-                                contourPlot=args.contours, savePlot=args.saveplot, showPlot=args.display,
+                                contourPlot=args.contours,
+                                contourBackground=args.contourbg,
+                                savePlot=args.saveplot, showPlot=args.display,
                                 relSavePath=save_path, logOfData=args.logplot,
                                 pdfSave=args.pdfsave, axeq=args.axneq,
                                 colormap=args.cmap,
