@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 from datetime import date
 from shutil import copy
-from os import chdir, getcwd
+from os import chdir, getcwd, environ
 from subprocess import run, Popen
 
 # create argument parser object
@@ -55,6 +55,9 @@ parser.add_argument('--time', action='store_true',
 parser.add_argument('--print_output', action='store_true',
                     help='Print the output of the code to the '
                     'terminal instead of saving it in a run.log file.')
+parser.add_argument('--nthreads', type=int, default=1,
+                    help='Number of OpenMP threads to run the code with '
+                    '(sets OMP_NUM_THREADS).')
 
 # parse the command line arguments to the script
 args = parser.parse_args()
@@ -163,12 +166,19 @@ print(new_par_file)
 # run the run directory setup shell script
 chdir(this_run_dir_path)
 run(Path(repo_root+"tools/run_dir_setup.sh").expanduser())
+
+# set the number of OpenMP threads for the run
+run_env = environ.copy()
+if args.nthreads:
+    run_env["OMP_NUM_THREADS"] = str(args.nthreads)
+
 if args.time:
     # execute the equivalent of: (time ./hosono-2DMHD.ex run.par > run.log 2>&1) 2> time.txt &
     with open("time.txt", "w") as f:
         p = Popen(
             ["bash", "-c", 'time ./hosono-2DMHD.ex "$1" > run.log 2>&1', "bash", new_par_file],
             stderr=f,
+            env=run_env,
         )
     print(p.pid)
 elif args.run_code and not args.print_output:
@@ -178,7 +188,8 @@ elif args.run_code and not args.print_output:
             ["./hosono-2DMHD.ex", new_par_file],
             stdout=f,
             stderr=f,   # optional: also capture stderr
+            env=run_env,
         )
     print(p.pid)
-else:
-    run(["./hosono-2DMHD.ex", new_par_file])
+elif args.run_code:
+    run(["./hosono-2DMHD.ex", new_par_file], env=run_env)
