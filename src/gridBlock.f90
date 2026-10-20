@@ -161,6 +161,7 @@ contains
         blk%y = 0.0
         blk%faceVals = 0.0
         blk%flux = 0.0
+        blk%fluxRaw = 0.0
         blk%scheme = 0
         blk%recompute = .false.
         blk%recomputeFLICD = .false.
@@ -209,6 +210,8 @@ contains
         implicit none
         type(gridBlock_t), intent(in out) :: blk
         integer, intent(in) :: i, j
+        ! local variables
+        integer :: ii, jj
 
         blk%scheme(:,i,j) = MAX(blk%scheme(:,i,j) - 1, 0)
 
@@ -218,11 +221,14 @@ contains
         blk%recompute(i,   j+1) = .true.
         blk%recompute(i,   j-1) = .true.
 
-        blk%recomputeFLICD(i,       j-2) = .true.
-        blk%recomputeFLICD(i-1:i+1, j-1) = .true.
-        blk%recomputeFLICD(i-2:i+2, j  ) = .true.
-        blk%recomputeFLICD(i-1:i+1, j+1) = .true.
-        blk%recomputeFLICD(i,       j+2) = .true.
+        ! every cell within 2 of (i,j) in the taxicab metric, clipped to the
+        ! array since reconstruct lowers cells as far out as strtIdx-2, which
+        ! is only 1 cell from the edge of the array when GP_maxRadius=1
+        do jj = MAX(j-2, blk%minIdx(ydir)), MIN(j+2, blk%maxIdx(ydir))
+            do ii = MAX(i-2, blk%minIdx(xdir)), MIN(i+2, blk%maxIdx(xdir))
+                if (ABS(ii-i) + ABS(jj-j) <= 2) blk%recomputeFLICD(ii,jj) = .true.
+            end do
+        end do
 
     end subroutine gridBlock_lowerOrder
 
