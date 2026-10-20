@@ -33,9 +33,6 @@ contains
                 ! fluxes that don't need to be recomputed but
                 ! this should only be a marginal slow down
                 ! since so few cells are flagged for recompute
-                ! Note: Actually this behavior is desired because
-                !       FLICD needs all of the flace fluxes recomputed
-                !       at the cells that get flagged
                 if (blk%recompute(i,j) .or. blk%recompute(i-1,j)) then
                     ! |             |             |            |
                     ! |     i-1   uL|uR    i      |     i+1    |
@@ -50,7 +47,7 @@ contains
 
                     ! the flux at the i-1/2 interface
                     blk%fluxRaw(:, xdir, i, j) = riemannsolver_getFaceFlux(uL, uR, xdir, rr)
-                    blk%flux(:, xdir, i, j) = riemannsolver_getFaceFlux(uL, uR, xdir, rr)
+                    blk%flux(:, xdir, i, j) = blk%fluxRaw(:, xdir, i, j)
                 end if
 
 
@@ -84,7 +81,7 @@ contains
 
                     ! the flux at the j-1/2 interface
                     blk%fluxRaw(:, ydir, i, j) = riemannsolver_getFaceFlux(uL, uR, ydir, rr)
-                    blk%flux(:, ydir, i, j) = riemannsolver_getFaceFlux(uL, uR, ydir, rr)
+                    blk%flux(:, ydir, i, j) = blk%fluxRaw(:, ydir, i, j)
                 end if
             end do
         end do
