@@ -21,6 +21,7 @@ files=("cfl.f90" \
 	"simulation.f90"         \
 	"timeStep.f90"           \
 	"detect.f90"             \
+	"FLICDdivB.f90"             \
 	"Makefile"               \
 )
 

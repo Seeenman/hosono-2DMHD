@@ -55,6 +55,7 @@ module gridBlock
         ! fluxes from each riemann problem that was solved at a quadrature point
         ! (variable, dir, xcoordinate, ycoordinate)
         real, allocatable :: flux(:,:,:,:)
+        real, allocatable :: fluxRaw(:,:,:,:)
 
         ! ---- MOOD scheme cascade ----
         ! which reconstruction scheme to use at each face of each cell
@@ -71,6 +72,18 @@ module gridBlock
         ! faces with it
         ! (i, j)
         logical, allocatable :: recompute(:,:)
+
+        ! whether a cell's corrected fluxes (corrected by FLICD) get
+        ! recomputed on the next iteration of the MOOD loop inside of Forward Euler.
+        ! Also means that the unsplit finite volume update in timeStep_forwardEuler
+        ! gets recomputed.
+        ! Set for a cell whose order was lowered by detect_ALL and any cell within
+        ! a radius of 2 under the taxi cab metric since if cell (i,j) get's its
+        ! order lowered then all four face fluxes of that cell change and those
+        ! fluxes are used by cells up to a distance of 2 away from cell (i,j)
+        ! when the fluxes get corrected for cell centered constrained transport
+        ! (i, j)
+        logical, allocatable :: recomputeFLICD(:,:)
 
     end type gridBlock_t
 
@@ -117,6 +130,18 @@ contains
         allocate(blk%flux(nConsVars, ndim, &
                           blk%minIdx(xdir):blk%maxIdx(xdir), &
                           blk%minIdx(ydir):blk%maxIdx(ydir)))
+        ! raw flux holds the fluxes that the Riemann solver
+        ! returns without any div(B)=0 control. fluxRaw is used by FLICDdivB
+        ! to build the corrected components of the magnetic field
+        ! by using the cell centered constrained transport scheme.
+        ! This is necessary because otherwise FLICDdivB_fluxCorrections
+        ! would overwrite blk%flux multiple times during the MOOD loop
+        ! and we wouldn't have a consistent starting point to recompute the
+        ! corrected values of the magnetic field from on each iteration
+        ! of the mood loop.
+        allocate(blk%fluxRaw(nConsVars, ndim, &
+                             blk%minIdx(xdir):blk%maxIdx(xdir), &
+                             blk%minIdx(ydir):blk%maxIdx(ydir)))
 
         ! MOOD scheme/GP radius used at each face of each cell
         allocate(blk%scheme(nfaces, &
@@ -127,6 +152,9 @@ contains
         allocate(blk%recompute( &
             blk%minIdx(xdir):blk%maxIdx(xdir), &
             blk%minIdx(ydir):blk%maxIdx(ydir)))
+        allocate(blk%recomputeFLICD( &
+            blk%minIdx(xdir):blk%maxIdx(xdir), &
+            blk%minIdx(ydir):blk%maxIdx(ydir)))
 
         !!! zero all of these out !!!
         blk%x = 0.0
@@ -135,6 +163,7 @@ contains
         blk%flux = 0.0
         blk%scheme = 0
         blk%recompute = .false.
+        blk%recomputeFLICD = .false.
 
     end subroutine gridBlock_alloc
 
@@ -152,18 +181,24 @@ contains
         deallocate(blk%y)
         deallocate(blk%faceVals)
         deallocate(blk%flux)
+        deallocate(blk%fluxRaw)
         deallocate(blk%scheme)
         deallocate(blk%recompute)
+        deallocate(blk%recomputeFLICD)
 
     end subroutine gridBlock_dealloc
 
     pure subroutine gridBlock_lowerOrder(blk, i, j)
         ! purpose:      Lower the order of the reconstruction used in cell
-        !               (i,j) by one, down to first order, and flag the
+        !               (i,j) by one, going no lower than first order, and flag the
         !               cell and its four neighbors to be recomputed in
         !               the MOOD loop. The neighbors are flagged since the
         !               faces they share with (i,j) are reconstructed at
-        !               the lower order of the two cells (EDP1)
+        !               the lower order of the two cells (EDP1 from GP-MOOD paper).
+        !               Additionally, all cells within radius 2 of (i,j) under
+        !               the taxi cab metric are also flagged since cell centered
+        !               constrained transport (for div(B)=0) requires an even larger
+        !               stencil
         !
         ! Inputs:       - blk (gridBlock_t) the block containing the cell
         !               - i, j (integer) the indices of the cell
@@ -182,6 +217,12 @@ contains
         blk%recompute(i-1, j  ) = .true.
         blk%recompute(i,   j+1) = .true.
         blk%recompute(i,   j-1) = .true.
+
+        blk%recomputeFLICD(i,       j-2) = .true.
+        blk%recomputeFLICD(i-1:i+1, j-1) = .true.
+        blk%recomputeFLICD(i-2:i+2, j  ) = .true.
+        blk%recomputeFLICD(i-1:i+1, j+1) = .true.
+        blk%recomputeFLICD(i,       j+2) = .true.
 
     end subroutine gridBlock_lowerOrder
 

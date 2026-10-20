@@ -50,20 +50,22 @@ contains
         integer :: ii, jj, counter
         logical :: admissible, shock1, shock2, shock3
         logical :: sx1, sx2, sx3, sy1, sy2, sy3, smooth1, smooth2
-        logical, allocatable :: checkCell(:,:) ! local copy of the state that blk%recompute was in when passed into this routine
+        logical, allocatable :: checkCell(:,:) ! local copy of the state that blk%recomputeFLICD was in when passed into this routine
         logical, allocatable :: lowerCell(:,:) ! cells that failed detection and need their order lowered
 
         exit_mood_loop = .true.
 
         ! only cells that were recomputed on this pass of the MOOD loop
         ! need to be checked, every other cell passed on an earlier pass.
-        ! blk%recompute is then rebuilt from just the cells that fail
+        ! blk%recomputeFLICD and blk%recompute are both rebuilt based on
+        ! the cells that fail the checks
         allocate(checkCell(blk%minIdx(xdir):blk%maxIdx(xdir), &
                            blk%minIdx(ydir):blk%maxIdx(ydir)))
         allocate(lowerCell(blk%minIdx(xdir):blk%maxIdx(xdir), &
                            blk%minIdx(ydir):blk%maxIdx(ydir)))
-        checkCell = blk%recompute
+        checkCell = blk%recomputeFLICD
         blk%recompute = .false.
+        blk%recomputeFLICD = .false.
         lowerCell = .false.
 
         dx = blk%dl(xdir)
@@ -220,7 +222,12 @@ contains
         do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
             do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
                 if (lowerCell(i,j)) then
-                    call gridBlock_lowerOrder(blk, i, j) ! this lowers blk%scheme(:,i,j) by one and sets blk%recompute(k,l) to .true. for (k,l) = (i,j), (i+1,j), (i-1,j), (i,j+1), (i,j-1)
+                    ! this lowers the value of blk%scheme(:,i,j) by 1 and sets
+                    ! blk%recompute(k,l) to .true. for
+                    ! (k,l) = (i,j), (i+1,j), (i-1,j), (i,j+1), (i,j-1)
+                    ! it also sets blk%recomputeFLICD to .true. for
+                    ! for every cell within 2 cells of (i,j)
+                    call gridBlock_lowerOrder(blk, i, j) 
                     exit_mood_loop = .false.
                 end if
             end do

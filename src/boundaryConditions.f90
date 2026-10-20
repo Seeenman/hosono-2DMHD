@@ -197,7 +197,7 @@ contains
         type(gridBlock_t), intent(in out) :: blk
         ! local variables
         integer :: i, j, ip, jp
-        logical :: eitherRecomputes
+        logical :: eitherRecomp
         integer :: lowerScheme(nfaces)
 
         ! x direction. Every row is swept, guard rows included, so that the
@@ -211,9 +211,15 @@ contains
                 else
                     CYCLE ! interior cell, handled through its guard cell image
                 end if
-                eitherRecomputes = blk%recompute(i,j) .or. blk%recompute(ip,j)
-                blk%recompute(i, j) = eitherRecomputes
-                blk%recompute(ip,j) = eitherRecomputes
+                ! propagate recomputeFLICD flag
+                eitherRecomp = blk%recomputeFLICD(i,j) .or. blk%recomputeFLICD(ip,j)
+                blk%recomputeFLICD(i, j) = eitherRecomp
+                blk%recomputeFLICD(ip,j) = eitherRecomp
+                ! propagate recompute flag
+                eitherRecomp = blk%recompute(i,j) .or. blk%recompute(ip,j)
+                blk%recompute(i, j) = eitherRecomp
+                blk%recompute(ip,j) = eitherRecomp
+                ! propagate scheme
                 lowerScheme = MIN(blk%scheme(:,i,j), blk%scheme(:,ip,j))
                 blk%scheme(:,i, j) = lowerScheme
                 blk%scheme(:,ip,j) = lowerScheme
@@ -230,9 +236,15 @@ contains
                 CYCLE ! interior row, handled through its guard row image
             end if
             do i=blk%minIdx(xdir), blk%maxIdx(xdir)
-                eitherRecomputes = blk%recompute(i,j) .or. blk%recompute(i,jp)
-                blk%recompute(i,j ) = eitherRecomputes
-                blk%recompute(i,jp) = eitherRecomputes
+                ! propagate recomputeFLICD flag
+                eitherRecomp = blk%recomputeFLICD(i,j) .or. blk%recomputeFLICD(i,jp)
+                blk%recomputeFLICD(i,j ) = eitherRecomp
+                blk%recomputeFLICD(i,jp) = eitherRecomp
+                ! propagate recompute flag
+                eitherRecomp = blk%recompute(i,j) .or. blk%recompute(i,jp)
+                blk%recompute(i,j ) = eitherRecomp
+                blk%recompute(i,jp) = eitherRecomp
+                ! propagate scheme 
                 lowerScheme = MIN(blk%scheme(:,i,j), blk%scheme(:,i,jp))
                 blk%scheme(:,i,j ) = lowerScheme
                 blk%scheme(:,i,jp) = lowerScheme

@@ -4,7 +4,7 @@ module timeStep
     use gridBlock, only: gridBlock_t
     use gridState, only: gridState_t
     use convert, only: convert_cons2prim
-    use boundaryConditions, only: boundaryConditions_applyBlk
+    use boundaryConditions, only: boundaryConditions_applyBlk, boundaryConditions_applyMOOD
     use reconstruct, only: reconstruct_faceValsWithGP
     use getFluxes, only: getFluxes_
     use GP, only: GP_maxRadius
@@ -93,27 +93,36 @@ contains
             ! directly from blk%faceVals which was updated by
             ! reconstruct_faceValsWithGP using whatever substage value of U
             ! we are on.
+            ! This fills in blk%fluxRaw as well as blk%flux.
             call getFluxes_(blk)
 
             ! Call FLICDdivB here for cell centred constrained transport
+            ! blk%fluxRaw isn't changed by this subroutine, only blk%flux is
             call FLICDdivB_fluxCorrections(blk)
 
             ! only cells flagged by the MOOD loop have new fluxes. Unew
-            ! keeps the previous pass's values everywhere else
+            ! keeps the values from the last pass everywhere else
 
             !$omp parallel do collapse(2) default(none) shared(blk,U,Unew,dt,dx,dy) private(i,j)
             do j=blk%strtIdx(ydir), blk%stopIdx(ydir)
                 do i=blk%strtIdx(xdir), blk%stopIdx(xdir)
-                    if (.not. blk%recompute(i,j)) CYCLE
-                    ! the unsplit finite volume update
-                    Unew(:,i,j) = U(:,i,j) &
-                        - (dt/dx)*(blk%flux(:,xdir,i+1,j) - blk%flux(:,xdir,i,j)) &
-                        - (dt/dy)*(blk%flux(:,ydir,i,j+1) - blk%flux(:,ydir,i,j))
+                    if (blk%recomputeFLICD(i,j)) then
+                        ! the unsplit finite volume update
+                        Unew(:,i,j) = U(:,i,j) &
+                            - (dt/dx)*(blk%flux(:,xdir,i+1,j) - blk%flux(:,xdir,i,j)) &
+                            - (dt/dy)*(blk%flux(:,ydir,i,j+1) - blk%flux(:,ydir,i,j))
+                    end if
                 end do
             end do
             !$omp end parallel do
 
+            ! updates the order of the scheme used (via blk%scheme)
+            ! as well as the recompute flags
             call detect_ALL(blk, U, Unew, exit_mood_loop)
+
+            ! propagate the changes to blk%scheme and the recompute flags
+            ! from the interior cells into the guard cells
+            call boundaryConditions_applyMOOD(blk)
 
         end do
 
