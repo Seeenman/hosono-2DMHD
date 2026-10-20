@@ -1,12 +1,69 @@
+# PYTHON_ARGCOMPLETE_OK
 '''
 Command line tool for running a hosono simulation 
 '''
 import argparse
+import glob
+import os
 from pathlib import Path
 from datetime import date
 from shutil import copy
 from os import chdir, getcwd, environ
 from subprocess import run, Popen
+
+# tab completion is optional, hosrunner runs fine without argcomplete
+try:
+    import argcomplete
+except ImportError:
+    argcomplete = None
+
+repo_root = "~/repos/hosono-2DMHD/"
+
+
+# tab completion helpers
+def test_problem_completer(prefix, **kwargs):
+    '''Complete test problem names from the default par files.'''
+    par_dir = Path(repo_root+"par/").expanduser()
+    names = [f.name[:-len("_default.par")]
+             for f in par_dir.glob("*_default.par")]
+    return sorted(n for n in names if n.startswith(prefix))
+
+
+def param_completer(param_prefix):
+    '''Make a completer for the --sim/--grid/--GP/--IC options.
+    Completes parameter names from the test problem's default par file
+    (without the sim_/grid_/GP_/IC_ prefix) in the name slots of the
+    name value pairs. Value slots are left for the user to type.'''
+    def completer(prefix, parsed_args, action, **kwargs):
+        # an odd number of words already given means a value comes next
+        if len(getattr(parsed_args, action.dest) or []) % 2 == 1:
+            return []
+        par_file = Path(repo_root+"par/"+parsed_args.test_problem
+                        + "_default.par").expanduser()
+        if not par_file.exists():
+            return []
+        names = []
+        for line in par_file.read_text(encoding="utf-8").splitlines():
+            line = line.split("#", 1)[0]
+            if "=" not in line:
+                continue
+            key = line.split("=", 1)[0].strip()
+            if key.startswith(param_prefix+"_"):
+                names.append(key[len(param_prefix)+1:])
+        return [n for n in names if n.startswith(prefix)]
+    return completer
+
+
+def dir_completer(prefix, **kwargs):
+    '''Complete directory names.'''
+    return [path+'/' for path in glob.glob(prefix+'*') if os.path.isdir(path)]
+
+
+def nthreads_completer(prefix, **kwargs):
+    '''Complete thread counts up to the number of cores.'''
+    return [str(n) for n in range(1, (os.cpu_count() or 1)+1)
+            if str(n).startswith(prefix)]
+
 
 # create argument parser object
 parser = argparse.ArgumentParser(prog='hosrunner',
@@ -21,24 +78,29 @@ parser.add_argument('test_problem', type=str,
                     'the name of the test problem with today\'s ' \
                     'date appended. ' \
                     'This will also copy the corresponding default test ' \
-                    'problem parameter file from the par directory.')
+                    'problem parameter file from the par directory.'
+                    ).completer = test_problem_completer
 parser.add_argument('--sim', type=str, nargs='+', default=[],
                     help='Simulation parameters to change. ' \
                     'Format as paramName paramValue. ' \
-                    'For example, ndim 2 unsplit .true. riemannSolver \'hllc\' ')
+                    'For example, ndim 2 unsplit .true. riemannSolver \'hllc\' '
+                    ).completer = param_completer('sim')
 parser.add_argument('--grid', type=str, nargs='+', default=[],
                     help='Grid parameters to change. ' \
-                    'Same formatting options as simulation parameters.')
+                    'Same formatting options as simulation parameters.'
+                    ).completer = param_completer('grid')
 parser.add_argument('--GP', type=str, nargs='+', default=[],
                     help='Gaussian Process parameters to change. ' \
-                    'Same formatting options as simulation parameters.')
+                    'Same formatting options as simulation parameters.'
+                    ).completer = param_completer('GP')
 parser.add_argument('--IC', type=str, nargs='+', default=[],
                     help='Initial condition parameters to change. ' \
-                    'Same formatting options as simulation parameters.')
+                    'Same formatting options as simulation parameters.'
+                    ).completer = param_completer('IC')
 parser.add_argument('--save_to', type=str, default='./',
                     help='Optional directory to save ' \
                     'the run directory inside of relative' \
-                    'to your current directory.')
+                    'to your current directory.').completer = dir_completer
 parser.add_argument('--run_dir_name', type=str, 
                     help='Optional name for the run directory. '
                     'If no name given then the run directory '
@@ -57,7 +119,17 @@ parser.add_argument('--print_output', action='store_true',
                     'terminal instead of saving it in a run.log file.')
 parser.add_argument('--nthreads', type=int, default=1,
                     help='Number of OpenMP threads to run the code with '
-                    '(sets OMP_NUM_THREADS).')
+                    '(sets OMP_NUM_THREADS).').completer = nthreads_completer
+
+# answer a tab completion request if there is one (exits when it does)
+if argcomplete is not None:
+    # zsh shows each completion on one line and cuts off long help
+    # text, so only show the first sentence when completing
+    if '_ARGCOMPLETE' in os.environ:
+        for action in parser._actions:
+            if action.help:
+                action.help = action.help.split('. ')[0].rstrip('.')
+    argcomplete.autocomplete(parser)
 
 # parse the command line arguments to the script
 args = parser.parse_args()
@@ -69,7 +141,6 @@ else:
     parent_run_dir = getcwd()+"/"+args.save_to+"/"+args.test_problem+"_"+date.today().strftime("%Y-%m-%d")+"/"
 
 # copy the par file to the run directory 
-repo_root = "~/repos/hosono-2DMHD/"
 default_par_name = args.test_problem + "_default.par"
 default_par_path = Path(repo_root + "par/" + default_par_name).expanduser()
 if default_par_path.exists():
