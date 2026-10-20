@@ -134,7 +134,7 @@ contains
         ! compiler puts large local arrays on the stack or the heap.
         real, allocatable, dimension(:,:) :: dens, velx, vely, velz, pres, eint, gama, ener
         real, allocatable, dimension(:,:) :: magp, divb, magx, magy, magz
-        integer, allocatable, dimension(:,:) :: scheme
+        integer, allocatable, dimension(:,:) :: scheme, ordr
         integer :: error, space_rank
         integer :: i_dim, ii, jj, offsets(ndim)
         integer(HSIZE_T) :: data_dims_1d(1), data_dims_2d(2)
@@ -146,7 +146,7 @@ contains
                           dset_id_dens, dset_id_pres, dset_id_eint, dset_id_gama, &
                           dset_id_ener, &
                           dset_id_magp, dset_id_divb, dset_id_magx, dset_id_magy, dset_id_magz, &
-                          dset_id_scheme
+                          dset_id_scheme, dset_id_ordr
 
         !~~~! allocate the field buffers
         allocate(dens(blk%N(xdir), blk%N(ydir)))
@@ -163,6 +163,7 @@ contains
         allocate(magy(blk%N(xdir), blk%N(ydir)))
         allocate(magz(blk%N(xdir), blk%N(ydir)))
         allocate(scheme(blk%N(xdir), blk%N(ydir)))
+        allocate(ordr(blk%N(xdir), blk%N(ydir)))
 
         !=! open hdf5 interface
         call h5open_f(error)
@@ -225,6 +226,7 @@ contains
         call h5dcreate_f(file_id, "magp", H5T_NATIVE_DOUBLE, dspace_id, dset_id_magp, error)
         call h5dcreate_f(file_id, "divb", H5T_NATIVE_DOUBLE, dspace_id, dset_id_divb, error)
         call h5dcreate_f(file_id, "scheme", H5T_NATIVE_INTEGER, dspace_id, dset_id_scheme, error)
+        call h5dcreate_f(file_id, "ordr", H5T_NATIVE_INTEGER, dspace_id, dset_id_ordr, error)
 
         ! This gets ride of the warning:
         ! "Fortran runtime warning: An array temporary was created"
@@ -247,6 +249,8 @@ contains
         ! MOOD scheme (GP radius) used in each cell during the last
         ! forward Euler stage of the most recent time step
         scheme = blk%scheme(blk%strtIdx(xdir):blk%stopIdx(xdir), blk%strtIdx(ydir):blk%stopIdx(ydir))
+        ! order of accuracy of that scheme (GP radius R gives order 2R+1)
+        ordr = 2*scheme + 1
 
         ! derived quantities
         ener = dens*(velx**2+vely**2+velz**2)/2 + dens*eint ! total energy (hydro)
@@ -284,6 +288,7 @@ contains
         call h5dwrite_f(dset_id_magp, H5T_NATIVE_DOUBLE, magp, data_dims_2d, error)
         call h5dwrite_f(dset_id_divb, H5T_NATIVE_DOUBLE, divb, data_dims_2d, error)
         call h5dwrite_f(dset_id_scheme, H5T_NATIVE_INTEGER, scheme, data_dims_2d, error)
+        call h5dwrite_f(dset_id_ordr, H5T_NATIVE_INTEGER, ordr, data_dims_2d, error)
 
         !////! close datasets for primitive variables
         call h5dclose_f(dset_id_dens, error)
@@ -300,6 +305,7 @@ contains
         call h5dclose_f(dset_id_magp, error)
         call h5dclose_f(dset_id_divb, error)
         call h5dclose_f(dset_id_scheme, error)
+        call h5dclose_f(dset_id_ordr, error)
 
         !---! close dataspace for primitive variables
         call h5sclose_f(dspace_id, error)
@@ -360,6 +366,7 @@ contains
         deallocate(magy)
         deallocate(magz)
         deallocate(scheme)
+        deallocate(ordr)
 
     end subroutine output_writeHdf5
 
