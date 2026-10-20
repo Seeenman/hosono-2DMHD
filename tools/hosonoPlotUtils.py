@@ -21,13 +21,14 @@ from matplotlib.collections import QuadMesh
 import glob
 
 def draw2dData(x, y, var_data, colormap, logOfData=False, contourPlot=False,
-               contourBackground=False):
+               contourBackground=False, nLevels=30):
     """
     Draw 2D data on the current axes.
 
     Draws a pcolormesh, contour lines colored by the colormap, or (with
     contourBackground) black contour lines over the pcolormesh. logOfData
     puts both the coloring and the contour levels on a log scale.
+    nLevels sets the number of contour lines.
     Returns the object to build the colorbar from and a save name prefix.
     """
     orig_map = plt.get_cmap(colormap)
@@ -51,13 +52,12 @@ def draw2dData(x, y, var_data, colormap, logOfData=False, contourPlot=False,
             color_plot = plt.pcolormesh(x, y, var_data, cmap=orig_map, norm=norm)
         return color_plot, saveName
 
-    n_levels = 30
     vmin, vmax = level_data.min(), level_data.max()
     if logOfData:
-        levels = np.geomspace(vmin, vmax, n_levels)
+        levels = np.geomspace(vmin, vmax, nLevels)
         norm = colors.LogNorm(vmin, vmax)
     else:
-        levels = np.linspace(vmin, vmax, n_levels)
+        levels = np.linspace(vmin, vmax, nLevels)
 
     if contourBackground:
         plt.contour(x, y, var_data, levels=levels, colors='k', linewidths=0.6)
@@ -68,7 +68,7 @@ def draw2dData(x, y, var_data, colormap, logOfData=False, contourPlot=False,
     return color_plot, saveName
 
 def plot2dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
-                     contourPlot=False, contourBackground=False,
+                     contourPlot=False, contourBackground=False, nContourLevels=30,
                      relSavePath='./', axeq=True, logOfData=False,
                      pdfSave=False, custom_clim=None, colormap='jet', showPlot=False,
                      savePlot=True):
@@ -114,7 +114,8 @@ def plot2dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
     label_font = {'size': 14}
     # plot the data
     color_plot, saveName = draw2dData(x, y, var_data, colormap, logOfData,
-                                      contourPlot, contourBackground)
+                                      contourPlot, contourBackground,
+                                      nContourLevels)
     plt.colorbar(color_plot, label=var)  # this shows the colorbar
     axis_labels = ['x', 'y', 'z']
     ax.set_xlabel(axis_labels[coord_idxs[0]], fontdict=label_font)
@@ -142,7 +143,7 @@ def plot2dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
 
 def plot3dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
                      sliceNormalTo: str, sliceIdx=-1, contourPlot=False,
-                     contourBackground=False, relSavePath='./', axeq=True, logOfData=False, pdfSave=False,
+                     contourBackground=False, nContourLevels=30, relSavePath='./', axeq=True, logOfData=False, pdfSave=False,
                      custom_clim=False, colormap='jet', showPlot=False,
                      savePlot=True):
 
@@ -224,7 +225,8 @@ def plot3dVar2dSlice(var: str, relPathBaseName: str, timeIdx: int,
     label_font = {'size': 14}
     # plot the data
     color_plot, saveName = draw2dData(x, y, var_data, colormap, logOfData,
-                                      contourPlot, contourBackground)
+                                      contourPlot, contourBackground,
+                                      nContourLevels)
     plt.colorbar(color_plot, label=var)  # this shows the colorbar
     axis_labels = ['x', 'y', 'z']
     ax.set_xlabel(axis_labels[coord_idxs[0]], fontdict=label_font)

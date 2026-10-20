@@ -62,6 +62,9 @@ parser.add_argument('--contours', action='store_true',
 parser.add_argument('--contourbg', action='store_true',
                     help='Draw black contour lines over the usual colormap '
                     'coloring. Implies --contours.')
+parser.add_argument('--nlevels', type=int, default=30,
+                    help='Number of contour lines to draw with --contours '
+                    'or --contourbg. Defaults to 30.')
 
 # parse the command line arguments to the script
 args = parser.parse_args()
@@ -69,6 +72,9 @@ args = parser.parse_args()
 # get run name and base data file name
 base_name = args.datfile
 run_name = base_name.split('/')[-1]
+
+if args.nlevels < 1:
+    parser.error('--nlevels must be at least 1')
 
 # contour lines over the coloring is still a contour plot
 if args.contourbg:
@@ -126,6 +132,7 @@ for var_to_plot in args.var:
             pu.plot3dVar2dSlice(var_to_plot, base_name, i, args.direction,
                                 contourPlot=args.contours,
                                 contourBackground=args.contourbg,
+                                nContourLevels=args.nlevels,
                                 savePlot=args.saveplot, showPlot=args.display,
                                 relSavePath=save_path, logOfData=args.logplot,
                                 pdfSave=args.pdfsave, axeq=args.axneq,
@@ -137,6 +144,7 @@ for var_to_plot in args.var:
             pu.plot2dVar2dSlice(var_to_plot, base_name, i, 
                                 contourPlot=args.contours,
                                 contourBackground=args.contourbg,
+                                nContourLevels=args.nlevels,
                                 savePlot=args.saveplot, showPlot=args.display,
                                 relSavePath=save_path, logOfData=args.logplot,
                                 pdfSave=args.pdfsave, axeq=args.axneq,
