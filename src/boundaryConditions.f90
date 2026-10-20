@@ -1,7 +1,7 @@
 module boundaryConditions
 
 
-    use definitions, only: ndim, xdir, ydir
+    use definitions, only: ndim, xdir, ydir, nfaces
     use simulation, only: sim_BC
     use gridBlock, only: gridBlock_t
 
@@ -9,9 +9,46 @@ module boundaryConditions
 
     private
 
-    public :: boundaryConditions_apply, boundaryConditions_applyBlk
+    public :: boundaryConditions_apply, boundaryConditions_applyBlk, boundaryConditions_applyMOOD
 
 contains
+
+    subroutine boundaryConditions_applyMOOD(blk)
+        ! purpose:      Apply boundary conditions to the MOOD state of a block
+        !               (blk%scheme and blk%recompute) so that guard cells
+        !               match the cells they are images of. The detection step
+        !               only lowers the order of interior cells, but the fluxes
+        !               on the faces at the domain boundary, and the constrained
+        !               transport corrections next to it, are built from
+        !               reconstructions in the guard cells. If a guard cell is
+        !               not lowered along with its image, the same physical face
+        !               gets different fluxes on the two sides of a periodic
+        !               boundary, which breaks conservation and div(B)=0 there.
+        !
+        ! Inputs:       - blk (gridBlock_t) the block whose MOOD state to fill
+        !
+        ! Outputs:      - blk%scheme and blk%recompute with guard cells and
+        !                 their interior images made consistent
+        ! ------------------------------------------------------------
+        implicit none
+        type(gridBlock_t), intent(in out) :: blk
+
+        if (sim_BC == 'outflow') then
+            ! guard cells are copies of the boundary cells rather than images
+            ! of other interior cells, so there is nothing to keep consistent
+            return
+        else if (sim_BC == 'periodic') then
+            call periodicMOOD(blk)
+        else
+            write(*,*) "=========================================================================="
+            write(*,*) "Unrecognized choice of boundary condition: ", trim(sim_BC)
+            write(*,*) "Please check that, in your parameter file, the value of"
+            write(*,*) "sim_BC is set to a valid string, e.g., 'outflow' or 'periodic'"
+            write(*,*) "=========================================================================="
+            stop
+        end if
+
+    end subroutine boundaryConditions_applyMOOD
 
     subroutine boundaryConditions_applyBlk(blk, UorV)
         ! purpose:      Apply boundary conditions to the conservative or
@@ -148,5 +185,60 @@ contains
         end do
 
     end subroutine periodic
+
+    pure subroutine periodicMOOD(blk)
+        ! Give every guard cell and the interior cell it is a periodic image
+        ! of the lower of their two orders, and flag both for recompute if
+        ! either one is flagged. Flags have to go both ways: lowering an
+        ! interior cell next to the boundary flags its neighbor across the
+        ! boundary, which is a guard cell, so the interior image of that
+        ! guard cell has to be recomputed as well.
+        implicit none
+        type(gridBlock_t), intent(in out) :: blk
+        ! local variables
+        integer :: i, j, ip, jp
+        logical :: eitherRecomputes
+        integer :: lowerScheme(nfaces)
+
+        ! x direction. Every row is swept, guard rows included, so that the
+        ! corner guard cells are reached when the y direction is swept below.
+        do j=blk%minIdx(ydir), blk%maxIdx(ydir)
+            do i=blk%minIdx(xdir), blk%maxIdx(xdir)
+                if (i < blk%strtIdx(xdir)) then
+                    ip = i + blk%N(xdir)
+                else if (i > blk%stopIdx(xdir)) then
+                    ip = i - blk%N(xdir)
+                else
+                    CYCLE ! interior cell, handled through its guard cell image
+                end if
+                eitherRecomputes = blk%recompute(i,j) .or. blk%recompute(ip,j)
+                blk%recompute(i, j) = eitherRecomputes
+                blk%recompute(ip,j) = eitherRecomputes
+                lowerScheme = MIN(blk%scheme(:,i,j), blk%scheme(:,ip,j))
+                blk%scheme(:,i, j) = lowerScheme
+                blk%scheme(:,ip,j) = lowerScheme
+            end do
+        end do
+
+        ! y direction
+        do j=blk%minIdx(ydir), blk%maxIdx(ydir)
+            if (j < blk%strtIdx(ydir)) then
+                jp = j + blk%N(ydir)
+            else if (j > blk%stopIdx(ydir)) then
+                jp = j - blk%N(ydir)
+            else
+                CYCLE ! interior row, handled through its guard row image
+            end if
+            do i=blk%minIdx(xdir), blk%maxIdx(xdir)
+                eitherRecomputes = blk%recompute(i,j) .or. blk%recompute(i,jp)
+                blk%recompute(i,j ) = eitherRecomputes
+                blk%recompute(i,jp) = eitherRecomputes
+                lowerScheme = MIN(blk%scheme(:,i,j), blk%scheme(:,i,jp))
+                blk%scheme(:,i,j ) = lowerScheme
+                blk%scheme(:,i,jp) = lowerScheme
+            end do
+        end do
+
+    end subroutine periodicMOOD
 
 end module boundaryConditions
